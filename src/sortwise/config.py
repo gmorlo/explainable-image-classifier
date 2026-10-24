@@ -9,6 +9,12 @@ RAW_DIR = DATA_DIR / "raw"
 PROCESSED_DIR = DATA_DIR / "processed"
 SPLITS_DIR = PROCESSED_DIR / "splits"
 MANIFEST_PATH = PROCESSED_DIR / "manifest.json"
+SPLITS_PATH = SPLITS_DIR / "splits.json"
+
+ARTIFACTS_DIR = PROJECT_ROOT / "artifacts"
+RUNS_DIR = ARTIFACTS_DIR / "runs"
+COMPARISONS_DIR = ARTIFACTS_DIR / "comparisons"
+CONFIGS_DIR = PROJECT_ROOT / "configs"
 
 DATASET_NAME = "dataset-resized"
 DATASET_DIR = RAW_DIR / DATASET_NAME

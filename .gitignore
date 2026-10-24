@@ -26,18 +26,18 @@ htmlcov/
 # Dataset and derived artifacts (project root only — not src/sortwise/data/)
 /data/
 
-# Model weights and training artifacts
-artifacts/
-models/
-checkpoints/
+# Model weights and training artifacts (root-level dirs only)
+/artifacts/
+/models/
+/checkpoints/
 *.pt
 *.pth
 *.onnx
 *.ckpt
 mlruns/
 lightning_logs/
-runs/
-outputs/
+/runs/
+/outputs/
 wandb/
 
 # Jupyter
