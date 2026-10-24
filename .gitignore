@@ -1,0 +1,56 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Dataset and derived artifacts (project root only — not src/sortwise/data/)
+/data/
+
+# Model weights and training artifacts
+artifacts/
+models/
+checkpoints/
+*.pt
+*.pth
+*.onnx
+*.ckpt
+mlruns/
+lightning_logs/
+runs/
+outputs/
+wandb/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Local misc
+*.log
+tmp/
+temp/
