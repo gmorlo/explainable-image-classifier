@@ -20,7 +20,9 @@ Training was the smallest part. Most of the work went into checking that the res
 6. **The model as a versioned artifact.** Weights, label map, config and metrics are published together to the Hugging Face Hub under an immutable tag (`v1`). The app loads a pinned version, so a rollback is one environment variable. I checked that the app reproduces the evaluation script's predictions (60/60 test images).
 7. **Tests in CI.** GitHub Actions runs on every push and guards the failures that silently break experiments: leakage and duplicates across splits, seed reproducibility, Grad-CAM for every model and training mode, and the predictor contract (6 classes, scores sum to 1, correct heatmap shape).
 
-Full tables, confusion matrix and heatmap galleries: **[docs/results.md](docs/results.md)**.
+![Seed noise is bigger than the gap between the top-2 settings](docs/img/chart_seeds.png)
+
+Full tables, charts, confusion matrix and heatmap galleries: **[docs/results.md](docs/results.md)**.
 
 ## Where the model fails
 

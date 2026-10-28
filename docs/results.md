@@ -17,6 +17,8 @@ Both were found during a code audit. All results below are after the fix.
 
 Finetune = last network stage + classifier trained; head = classifier only.
 
+![Validation macro-F1: head only vs fine-tuned, per backbone](img/chart_models.png)
+
 | Model | Variant | Val macro-F1 | Weights MB | CPU ms / image | GPU ms / image |
 | --- | --- | ---: | ---: | ---: | ---: |
 | **EfficientNet-B0** | finetune | **0.914** | 16.3 | 12.8 | 4.9 |
@@ -39,6 +41,8 @@ A 3 × 2 × 2 grid = 12 runs (lr × batch × weight decay), seed 42:
 
 Top-2 rerun on three seeds (42, 1, 2):
 
+![Seed spread for the top-2 learning rates](img/chart_seeds.png)
+
 | LR | Seed 42 | Seed 1 | Seed 2 | Mean ± std |
 | ---: | ---: | ---: | ---: | ---: |
 | **3e-4** | 0.925 | 0.930 | 0.902 | **0.919 ± 0.015** |
@@ -57,6 +61,8 @@ The test set was used **once**, after all decisions were made.
 | Accuracy | 0.929 | **0.910** |
 
 The val → test drop is expected: settings were chosen on validation.
+
+![Per-class test F1](img/chart_per_class.png)
 
 ![Test confusion matrix](img/test_confusion_matrix.png)
 
@@ -90,6 +96,12 @@ Findings from the errors:
 - **Metal → glass:** shiny, reflective cans.
 - Many errors have a **high softmax score (84–100%)**. The model is confident even when wrong, so a confidence threshold alone will catch few errors — which is why the app shows the top 3 classes, not just one.
 
+## 6. Training curve of the final model
+
+![Validation macro-F1 per epoch with early stopping](img/chart_training.png)
+
+The checkpoint is the epoch with the best validation macro-F1 (14); training stops after 5 epochs without improvement.
+
 ## Reproduce
 
 ```bash
@@ -97,4 +109,5 @@ python scripts/prepare_split.py
 python scripts/train.py --config configs/final_efficientnet_b0.yaml --variant finetune --run-name final/efficientnet_b0
 python scripts/evaluate.py
 python scripts/gradcam_gallery.py
+python scripts/plot_results.py   # charts + docs/data/results.json
 ```
