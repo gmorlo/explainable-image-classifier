@@ -54,3 +54,6 @@ Thumbs.db
 *.log
 tmp/
 temp/
+
+# /brag video work files (final video lives in docs/)
+/brag-output/

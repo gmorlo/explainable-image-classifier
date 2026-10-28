@@ -2,7 +2,9 @@
 
 Upload a photo of a single waste item and get the three most likely categories (cardboard, glass, metal, paper, plastic, other) together with a **Grad-CAM heatmap** of the parts of the image the model looked at.
 
-![SortWise — correct prediction with a Grad-CAM heatmap](docs/img/app_correct.png)
+![SortWise demo: confident mistake, Grad-CAM explanation, engineering highlights](docs/img/demo.gif)
+
+22-second video with sound: [docs/demo.mp4](docs/demo.mp4)
 
 **Test set (TrashNet, 379 images, used once): macro-F1 0.893 · accuracy 0.910** · EfficientNet-B0 · ~44 ms per image incl. heatmap on CPU
 
