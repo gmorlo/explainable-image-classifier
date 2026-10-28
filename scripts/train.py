@@ -24,7 +24,7 @@ def load_yaml(path: Path) -> dict:
         return yaml.safe_load(f)
 
 
-def run_variant(cfg_doc: dict, variant: str) -> dict:
+def run_variant(cfg_doc: dict, variant: str, run_name: str | None = None) -> dict:
     if variant not in cfg_doc["variants"]:
         raise SystemExit(f"Unknown variant {variant!r}. Choose from: {list(cfg_doc['variants'])}")
 
@@ -62,7 +62,7 @@ def run_variant(cfg_doc: dict, variant: str) -> dict:
         },
     }
     print(f"=== Training model={train_cfg.model_name} variant={variant} trainable={train_cfg.trainable} lr={train_cfg.lr} ===")
-    result = train_model(model, loaders, train_cfg, config_snapshot=snapshot)
+    result = train_model(model, loaders, train_cfg, config_snapshot=snapshot, run_name=run_name)
     print(f"Done. run_dir={result['run_dir']}")
     print(
         f"best_val_macro_f1={result['metrics']['best_val_macro_f1']:.4f} "
