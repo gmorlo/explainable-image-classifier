@@ -56,7 +56,7 @@ def test_predictor_returns_all_classes_and_heatmap():
     import numpy as np
     from PIL import Image
 
-    from sortwise.config import CLASS_LABELS_PL, CLASS_NAMES
+    from sortwise.config import CLASS_LABELS, CLASS_NAMES
     from sortwise.inference import Predictor
     from sortwise.models.factory import MODEL_SPECS
 
@@ -65,7 +65,7 @@ def test_predictor_returns_all_classes_and_heatmap():
                           torch.device("cpu"))
     image = Image.fromarray(np.random.randint(0, 255, (300, 400, 4), dtype=np.uint8))  # RGBA, non-square
     scores, heatmap = predictor.predict(image)
-    assert list(scores) == list(CLASS_NAMES) and set(CLASS_LABELS_PL) == set(CLASS_NAMES)
+    assert list(scores) == list(CLASS_NAMES) and set(CLASS_LABELS) == set(CLASS_NAMES)
     assert abs(sum(scores.values()) - 1.0) < 1e-4
     assert heatmap.shape == (224, 224, 3) and 0.0 <= heatmap.min() and heatmap.max() <= 1.0
 

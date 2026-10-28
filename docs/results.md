@@ -1,23 +1,23 @@
-# Wyniki i wnioski
+# Results and findings
 
-Stan: 2026-10-28. Wszystkie treningi na NVIDIA RTX 3070 (CUDA), PyTorch 2.11.
-Dane: TrashNet `dataset-resized`, 2521 zdjęć po usunięciu duplikatów, split 70/15/15 (seed 42, stratyfikowany).
-Główna miara: **macro-F1** — klasa `trash` (137 zdjęć) jest 3–4× mniejsza od pozostałych, accuracy by to ukryło.
+As of 2026-10-28. All training on an NVIDIA RTX 3070 (CUDA), PyTorch 2.11.
+Data: TrashNet `dataset-resized`, 2521 images after duplicate removal, 70/15/15 split (seed 42, stratified).
+Main metric: **macro-F1** — the `trash` class (137 images) is 3–4× smaller than the others, and accuracy would hide that.
 
-## 1. Problemy znalezione w danych i kodzie
+## 1. Problems found in the data and the code
 
-| Problem | Skutek | Naprawa |
+| Problem | Effect | Fix |
 | --- | --- | --- |
-| 3 pary identycznych plików (ten sam SHA-256) z **różnymi etykietami**: `glass115`=`metal91`, `glass176`=`plastic152`, `glass389`=`plastic332` | Błędna etykieta + przeciek: kopie trafiały do train i val | `drop_duplicates` w `split.py` usuwa wszystkie 6 (prawdziwa etykieta nieznana); lista w `splits.json → excluded` |
-| Seed ustawiany dopiero po zbudowaniu modelu, cuDNN autotuning | Ta sama konfiguracja dawała 0.896 albo 0.928 | `set_seed` przed `build_model` + `cudnn.deterministic`; powtórka daje identyczny wynik |
+| 3 pairs of identical files (same SHA-256) with **different labels**: `glass115`=`metal91`, `glass176`=`plastic152`, `glass389`=`plastic332` | Wrong label + leakage: copies ended up in both train and val | `drop_duplicates` in `split.py` removes all 6 (the true label is unknown); listed in `splits.json → excluded` |
+| Seed set only after the model was built, cuDNN autotuning on | The same config gave 0.896 or 0.928 | `set_seed` before `build_model` + `cudnn.deterministic`; a rerun now gives an identical result |
 
-Oba wykryte przy audycie kodu. Wszystkie wyniki poniżej są po naprawie.
+Both were found during a code audit. All results below are after the fix.
 
-## 2. Porównanie architektur (walidacja)
+## 2. Architecture comparison (validation)
 
-Fine-tuning = trenowany ostatni blok sieci + klasyfikator; head = tylko klasyfikator.
+Finetune = last network stage + classifier trained; head = classifier only.
 
-| Model | Wariant | Val macro-F1 | Wagi MB | CPU ms / zdjęcie | GPU ms / zdjęcie |
+| Model | Variant | Val macro-F1 | Weights MB | CPU ms / image | GPU ms / image |
 | --- | --- | ---: | ---: | ---: | ---: |
 | **EfficientNet-B0** | finetune | **0.914** | 16.3 | 12.8 | 4.9 |
 | ResNet18 | finetune | 0.910 | 44.8 | 8.3 | 2.9 |
@@ -26,71 +26,71 @@ Fine-tuning = trenowany ostatni blok sieci + klasyfikator; head = tylko klasyfik
 | MobileNetV3-Small | head | 0.811 | 6.2 | 3.9 | 3.4 |
 | ResNet18 | head | 0.780 | 44.8 | 8.3 | 2.9 |
 
-Wnioski:
-- Fine-tuning ostatniego bloku daje +0.06–0.13 macro-F1 względem samej głowy.
-- EfficientNet-B0 i ResNet18 są blisko; EfficientNet wybrany, bo ma najlepszy wynik przy ~3× mniejszych wagach. 13 ms na CPU desktopa; czas na darmowym CPU w HF Spaces zmierzymy po wdrożeniu.
+Findings:
+- Fine-tuning the last stage adds +0.06–0.13 macro-F1 over training the head alone.
+- EfficientNet-B0 and ResNet18 are close; EfficientNet was chosen for the best score at ~3× smaller weights. 13 ms on a desktop CPU is fast enough for an interactive demo.
 
-## 3. Hiperparametry EfficientNet-B0 finetune
+## 3. EfficientNet-B0 finetune hyperparameters
 
-Siatka 3 × 2 × 2 = 12 runów (lr × batch × weight decay), seed 42:
-- **Batch 16 > 32** — wszystkie 5 najlepszych wyników miało batch 16.
-- **Weight decay prawie bez znaczenia** — przy lr 1e-4 wyniki z i bez były identyczne.
-- Najlepsze: lr 1e-3 (0.929) i lr 3e-4 (0.925), batch 16, wd 0.
+A 3 × 2 × 2 grid = 12 runs (lr × batch × weight decay), seed 42:
+- **Batch 16 > 32** — all top-5 results used batch 16.
+- **Weight decay barely matters** — at lr 1e-4 results with and without it were identical.
+- Best: lr 1e-3 (0.929) and lr 3e-4 (0.925), batch 16, wd 0.
 
-Powtórki top-2 na trzech seedach (42, 1, 2):
+Top-2 rerun on three seeds (42, 1, 2):
 
-| LR | Seed 42 | Seed 1 | Seed 2 | Średnia ± std |
+| LR | Seed 42 | Seed 1 | Seed 2 | Mean ± std |
 | ---: | ---: | ---: | ---: | ---: |
 | **3e-4** | 0.925 | 0.930 | 0.902 | **0.919 ± 0.015** |
 | 1e-3 | 0.929 | 0.917 | 0.888 | 0.911 ± 0.022 |
 
-Wybór: **lr 3e-4, batch 16, wd 0** (`configs/final_efficientnet_b0.yaml`) — wyższa średnia i mniejszy rozrzut.
-Różnica między ustawieniami (0.008) jest mniejsza niż rozrzut między seedami, więc to wybór stabilniejszego wariantu, nie dowód wyraźnej przewagi.
+Choice: **lr 3e-4, batch 16, wd 0** (`configs/final_efficientnet_b0.yaml`) — higher mean and lower spread.
+The gap between the settings (0.008) is smaller than the spread between seeds, so this picks the more stable option; it is not evidence of a clear advantage.
 
-## 4. Wynik końcowy na zbiorze testowym
+## 4. Final test-set result
 
-Zbiór testowy użyty **jeden raz**, po wszystkich decyzjach.
+The test set was used **once**, after all decisions were made.
 
-| Miara | Walidacja | Test |
+| Metric | Validation | Test |
 | --- | ---: | ---: |
 | Macro-F1 | 0.925 | **0.893** |
 | Accuracy | 0.929 | **0.910** |
 
-Spadek val → test jest oczekiwany: ustawienia były wybierane pod walidację.
+The val → test drop is expected: settings were chosen on validation.
 
-![Macierz pomyłek na teście](img/test_confusion_matrix.png)
+![Test confusion matrix](img/test_confusion_matrix.png)
 
-| Klasa | F1 | Najczęstszy błąd |
+| Class | F1 | Most common error |
 | --- | ---: | --- |
-| Karton | 0.93 | 5× jako papier |
-| Papier | 0.92 | 3× jako trash |
-| Plastik | 0.92 | 5× jako szkło |
-| Szkło | 0.91 | rzadkie |
-| Metal | 0.91 | 3× jako szkło |
-| Trash | 0.76 | 3× jako papier |
+| Cardboard | 0.93 | 5× as paper |
+| Paper | 0.92 | 3× as trash |
+| Plastic | 0.92 | 5× as glass |
+| Glass | 0.91 | rare |
+| Metal | 0.91 | 3× as glass |
+| Trash | 0.76 | 3× as paper |
 
-Wnioski:
-- Mylą się pary podobne wizualnie: **karton ↔ papier** (materiał, kolor) i **plastik ↔ szkło** (przezroczystość, odblaski).
-- `trash` jest najsłabszy przez małą liczbę przykładów (20 w teście) i brak jednego wyglądu klasy.
-- TrashNet to głównie przedmioty na jasnym tle — wynik nie mówi, jak model działa na zdjęciach z innym tłem (osobny test na własnych zdjęciach: do zrobienia).
+Findings:
+- Visually similar pairs get confused: **cardboard ↔ paper** (material, colour) and **plastic ↔ glass** (transparency, reflections).
+- `trash` is the weakest: few examples (20 in test) and no single typical look.
+- TrashNet is mostly single items on a light background — this result says nothing about photos with other backgrounds (a separate test on own photos: to do).
 
-## 5. Wyjaśnialność: Grad-CAM
+## 5. Explainability: Grad-CAM
 
-Heatmapa pokazuje, które obszary zdjęcia najbardziej podniosły wynik przewidzianej klasy (ostatni blok konwolucyjny, `features[-1]` w EfficientNet-B0). To wskazówka, gdzie model „patrzy” — nie maska obiektu ani dowód poprawnego rozumowania.
+The heatmap shows which image regions raised the predicted class score the most (last convolutional block, `features[-1]` in EfficientNet-B0). It hints at where the model "looks" — it is not an object mask or proof of correct reasoning.
 
-![Grad-CAM — poprawne predykcje](img/gradcam_correct.png)
+![Grad-CAM — correct predictions](img/gradcam_correct.png)
 
-Przy poprawnych predykcjach model patrzy na sam przedmiot (szyjka butelki, puszka, ogryzek), nie na białe tło.
+For correct predictions the model looks at the item itself (bottle neck, can, apple core), not at the white background.
 
-![Grad-CAM — błędy](img/gradcam_errors.png)
+![Grad-CAM — errors](img/gradcam_errors.png)
 
-Wnioski z błędów:
-- **Karton → papier:** pomylone są płaskie, cienkie lub białe kawałki kartonu; model patrzy na krawędzie i zagięcia, które wyglądają jak kartka. Brak falistej struktury na zdjęciu = brak wskazówki „karton”.
-- **Plastik → szkło:** przezroczyste i zielone butelki oglądane od strony szyjki; heatmapa skupia się na okrągłym otworze — kształcie typowym dla butelek szklanych.
-- **Metal → szkło:** błyszczące, odbijające światło puszki.
-- Wiele błędów ma **wysoki wynik softmax (84–100%)**. Model jest pewny siebie nawet gdy się myli, więc sam próg pewności słabo wyłapie błędy — w aplikacji warto pokazywać top-3 klasy, nie tylko jedną.
+Findings from the errors:
+- **Cardboard → paper:** the confused pieces are flat, thin or white cardboard; the model looks at edges and folds that resemble a sheet of paper. No corrugated structure in the photo = no "cardboard" cue.
+- **Plastic → glass:** clear and green bottles seen from the neck; the heatmap focuses on the round opening — a shape typical of glass bottles.
+- **Metal → glass:** shiny, reflective cans.
+- Many errors have a **high softmax score (84–100%)**. The model is confident even when wrong, so a confidence threshold alone will catch few errors — which is why the app shows the top 3 classes, not just one.
 
-## Odtworzenie
+## Reproduce
 
 ```bash
 python scripts/prepare_split.py

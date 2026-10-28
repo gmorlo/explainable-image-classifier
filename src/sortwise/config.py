@@ -30,13 +30,13 @@ CLASS_NAMES = (
     "trash",
 )
 
-CLASS_LABELS_PL = {
-    "cardboard": "Karton",
-    "glass": "Szkło",
+CLASS_LABELS = {
+    "cardboard": "Cardboard",
+    "glass": "Glass",
     "metal": "Metal",
-    "paper": "Papier",
-    "plastic": "Plastik",
-    "trash": "Pozostałe odpady",
+    "paper": "Paper",
+    "plastic": "Plastic",
+    "trash": "Other waste",
 }
 
 SPLIT_RATIOS = {"train": 0.70, "val": 0.15, "test": 0.15}

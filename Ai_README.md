@@ -1,295 +1,295 @@
 # explainable-image-classifier
 
-## Kontekst dla AI
+## Context for AI
 
-Ten dokument jest **głównym planem projektu** oraz punktem odniesienia dla AI pomagającego w implementacji. Opisane funkcje są planowane — ich obecność tutaj nie oznacza, że już istnieją w kodzie. Przed zmianami sprawdź rzeczywistą zawartość repozytorium.
+This document is the **master plan for the project** and the reference point for AI assisting with implementation. The features described are planned; their presence here does not mean they already exist in the code. Check the actual contents of the repository before making changes.
 
-Projekt może objąć niemal cały cykl pracy ML Engineera. Największą wartość daje pokazanie, że potrafisz **uzasadnić decyzje, zmierzyć jakość, wdrożyć model i utrzymywać go po wdrożeniu**. Łącząc to z analizą wymagań, architekturą, bazami danych, testowaniem i zarządzaniem projektem, powstaje materiał do rozmów technicznych szerszy niż sam wynik accuracy.
+The project can cover nearly the whole ML Engineer workflow. The most valuable thing it can show is that you can **justify decisions, measure quality, deploy a model and maintain it after deployment**. Combined with requirements analysis, architecture, databases, testing and project management, it gives material for technical interviews that goes beyond an accuracy score.
 
-Robocza nazwa aplikacji: **SortWise**. Nazwa repozytorium: `explainable-image-classifier`.
-
----
-
-## Cel projektu
-
-Zbudować aplikację webową, która klasyfikuje pojedynczy odpad na zdjęciu do jednej z sześciu kategorii i prezentuje wizualizację Grad-CAM. Użytkownik przesyła zdjęcie, widzi wynik, sprawdza obszary wpływające na predykcję i może poprawić błędną kategorię.
-
-**Docelowy rezultat portfolio:**  
-„Zbudowałem aplikację klasyfikującą obrazy wraz z odtwarzalnym treningiem, oceną jakości, automatycznym wdrażaniem, monitoringiem i kontrolowaną aktualizacją modelu.”
-
-Priorytetem jest ukończony, mierzalny produkt rozwijany w trzech wydaniach (V1 → V2 → V3), a nie jednoczesna budowa całej infrastruktury.
+Working name of the application: **SortWise**. Repository name: `explainable-image-classifier`.
 
 ---
 
-## Zastosowanie biznesowe
+## Project goal
 
-Wsparcie użytkownika lub operatora we wstępnym rozpoznawaniu materiału odpadu. System sugeruje kategorię; użytkownik może ją zweryfikować. Potencjalne zastosowanie: etap pomocniczy w procesie sortowania.
+Build a web application that classifies a single piece of waste in a photo into one of six categories and shows a Grad-CAM visualization. The user uploads a photo, sees the result, checks the regions that influenced the prediction and can correct a wrong category.
 
-MVP rozpoznaje kategorię odpadu. Nie wybiera pojemnika na podstawie lokalnych zasad, nie ocenia zabrudzenia i nie steruje fizyczną sortownią. Skuteczność w rzeczywistym procesie wymaga osobnej walidacji.
+**Target portfolio outcome:**  
+"I built an image classification application with reproducible training, quality evaluation, automated deployment, monitoring and a controlled model update."
+
+The priority is a finished, measurable product delivered in three releases (V1 → V2 → V3), not building the whole infrastructure at once.
 
 ---
 
-## Dane
+## Business use case
 
-Używamy gotowego zbioru **TrashNet** (Gary Thung, Mindy Yang).
+Support a user or operator in the initial recognition of waste material. The system suggests a category; the user can verify it. Potential use: a helper step in a sorting process.
 
-- Źródło: https://github.com/garythung/trashnet
-- Oryginalny zbiór: 2527 zdjęć, głównie pojedyncze przedmioty na białym tle.
-- Nie zbieramy własnego zbioru treningowego jako warunku startu.
-- Datasetu nie dodajemy do Git. Przed treningiem weryfikujemy wersję, etykiety, liczebności, duplikaty i warunki wykorzystania.
+The MVP recognizes the waste category. It does not choose a bin based on local rules, assess contamination or control a physical sorting facility. Effectiveness in a real process requires separate validation.
 
-| Etykieta źródłowa | Etykieta w interfejsie | Liczba zdjęć |
+---
+
+## Data
+
+We use the ready-made **TrashNet** dataset (Gary Thung, Mindy Yang).
+
+- Source: https://github.com/garythung/trashnet
+- Original dataset: 2527 images, mostly single items on a white background.
+- Collecting our own training set is not a precondition for starting.
+- The dataset is not added to Git. Before training we verify the version, labels, counts, duplicates and terms of use.
+
+| Source label | UI label | Image count |
 | --- | --- | --- |
-| `cardboard` | Karton | 403 |
-| `glass` | Szkło | 501 |
+| `cardboard` | Cardboard | 403 |
+| `glass` | Glass | 501 |
 | `metal` | Metal | 410 |
-| `paper` | Papier | 594 |
-| `plastic` | Plastik | 482 |
-| `trash` | Pozostałe odpady | 137 |
+| `paper` | Paper | 594 |
+| `plastic` | Plastic | 482 |
+| `trash` | Other waste | 137 |
 
-Klasa `trash` jest konkretną klasą ze zbioru, nie uniwersalnym koszem na „nieznane obiekty”.
+The `trash` class is a specific class from the dataset, not a catch-all bin for "unknown objects".
 
 ---
 
-## Stack ML — decyzja techniczna
+## ML stack — technical decision
 
-| Element | Decyzja |
+| Element | Decision |
 | --- | --- |
-| Framework | **PyTorch** (aktualna stabilna wersja) + **torchvision** |
-| Akceleracja | **CUDA** — trening i lokalna ewaluacja na GPU NVIDIA |
-| Inferencja w demo | Preferencyjnie GPU, jeśli dostępne; fallback CPU w kontenerze / Cloud Run |
-| Modele do porównania | Co najmniej **dwa** backbony (patrz eksperymenty) |
-| Interpretacja | Grad-CAM |
+| Framework | **PyTorch** (current stable version) + **torchvision** |
+| Acceleration | **CUDA** — training and local evaluation on an NVIDIA GPU |
+| Inference in the demo | GPU preferred if available; CPU fallback in the container / Cloud Run |
+| Models to compare | At least **two** backbones (see experiments) |
+| Interpretation | Grad-CAM |
 
-Trening projektujemy pod CUDA od początku: detekcja urządzenia, `pin_memory`, przenoszenie batchy na GPU, zapis metryk czasu treningu/ewaluacji z informacją o sprzęcie. Kod musi działać też na CPU (CI, Cloud Run bez GPU), ale lokalne eksperymenty zakładają kartę NVIDIA.
+Training is designed for CUDA from the start: device detection, `pin_memory`, moving batches to the GPU, and recording training/evaluation timing metrics together with hardware information. The code must also run on CPU (CI, Cloud Run without a GPU), but local experiments assume an NVIDIA card.
 
 ---
 
-## Eksperymenty: modele i hiperparametry
+## Experiments: models and hyperparameters
 
-Porównanie rozwiązań i uzasadnienie wyboru to jeden z pięciu kluczowych elementów portfolio. Nie wystarczy „wziąć ResNet18”.
+Comparing solutions and justifying the choice is one of the five key elements of the portfolio. "Just take ResNet18" is not enough.
 
-### Porównanie modeli (macierz architektur)
+### Model comparison (architecture matrix)
 
-Porównujemy **co najmniej dwa** modele przy tym samym podziale danych, tym samym preprocessingu walidacyjnym i tej samej procedurze ewaluacji:
+We compare **at least two** models using the same data split, the same validation preprocessing and the same evaluation procedure:
 
-| Model | Rola | Poziom fine-tuningu do sprawdzenia |
+| Model | Role | Fine-tuning levels to check |
 | --- | --- | --- |
-| **ResNet18** | Baseline — prosty, szybki, dobrze znany | (A) zamrożony backbone + trenowana głowa; (B) fine-tuning części/końca sieci |
-| **EfficientNet-B0** lub **MobileNetV3-Small** | Alternatywa — inny balans jakość/rozmiar/czas | Te same warianty A/B |
+| **ResNet18** | Baseline — simple, fast, well known | (A) frozen backbone + trained head; (B) fine-tuning part/the end of the network |
+| **EfficientNet-B0** or **MobileNetV3-Small** | Alternative — different quality/size/time balance | The same A/B variants |
 
-Wynik: tabela z macro-F1, accuracy, czasem treningu, czasem inferencji (GPU i CPU), rozmiarem wag oraz krótkim uzasadnieniem wyboru modelu produkcyjnego.
+Result: a table with macro-F1, accuracy, training time, inference time (GPU and CPU), weight size and a short justification for the production model choice.
 
-### Macierz hiperparametrów
+### Hyperparameter matrix
 
-Dla wybranego baseline (najpierw ResNet18, wariant A lub B) przeprowadzamy **ograniczoną siatkę** — nie pełny grid wszystkiego naraz. Cel: pokazać metodykę, nie wyczerpać GPU.
+For the chosen baseline (ResNet18 first, variant A or B) we run a **limited grid** — not a full grid of everything at once. The goal is to show the methodology, not to exhaust the GPU.
 
-Proponowany zakres startowy (do doprecyzowania po pierwszym przebiegu):
+Proposed starting range (to be refined after the first run):
 
-| Hiperparametr | Wartości do sprawdzenia |
+| Hyperparameter | Values to check |
 | --- | --- |
 | Learning rate | `1e-3`, `3e-4`, `1e-4` |
-| Batch size | `16`, `32` (dostosuj do VRAM) |
-| Optimizer | `Adam` vs `SGD + momentum` (jedna oś na raz względem LR) |
+| Batch size | `16`, `32` (adjust to VRAM) |
+| Optimizer | `Adam` vs `SGD + momentum` (one axis at a time relative to LR) |
 | Weight decay | `0`, `1e-4` |
-| Epochs / early stopping | stały max + early stopping na walidacyjnym macro-F1 |
-| Augmentacje | zestaw minimalny vs rozszerzony (tylko train) |
+| Epochs / early stopping | fixed max + early stopping on validation macro-F1 |
+| Augmentations | minimal vs extended set (train only) |
 
-Zasady:
+Rules:
 
-1. Najpierw porównaj warianty modelu (A/B × 2 architektury) przy **ustalonych** hiperparametrach.
-2. Potem grid/random search hiperparametrów **tylko dla finalisty** (lub top-2).
-3. Wszystkie runy zapisuj w trackerze eksperymentów (np. MLflow): parametry, metryki, wersja danych, commit, wagi.
-4. Wybór ostateczny uzasadnij pomiarami (jakość vs czas vs rozmiar), nie intuicją.
-
----
-
-## Zakres MVP (produkt V1)
-
-1. Dodanie jednego zdjęcia JPEG/PNG.
-2. Walidacja pliku: format, dekodowanie, limity rozmiaru i pikseli.
-3. Klasyfikacja jednego dominującego przedmiotu do jednej z sześciu klas.
-4. Prezentacja kategorii i wyników dla wszystkich klas.
-5. Grad-CAM nałożony na zdjęcie.
-6. Zapis analizy z wersją modelu.
-7. Potwierdzenie lub poprawienie kategorii.
-8. Historia analiz w interfejsie.
-
-W V1 nie implementujemy: multi-object detection, segmentacji, wideo, aplikacji mobilnej, logowania, automatycznego douczania na poprawkach. Feedback użytkownika jest zapisywany, ale nie zmienia wag automatycznie.
+1. First compare model variants (A/B × 2 architectures) with **fixed** hyperparameters.
+2. Then run grid/random search over hyperparameters **only for the finalist** (or top-2).
+3. Log all runs in an experiment tracker (e.g. MLflow): parameters, metrics, data version, commit, weights.
+4. Justify the final choice with measurements (quality vs time vs size), not intuition.
 
 ---
 
-## Pełny cykl — 16 etapów
+## MVP scope (product V1)
 
-Takie podejście odpowiada cyklowi MLOps (dane → trening → walidacja → wdrożenie → monitoring → ponowny trening). Realizujemy stopniowo według wydań V1–V3.
+1. Upload a single JPEG/PNG image.
+2. File validation: format, decoding, size and pixel limits.
+3. Classification of one dominant item into one of six classes.
+4. Display of the category and the scores for all classes.
+5. Grad-CAM overlaid on the image.
+6. Saving the analysis together with the model version.
+7. Confirming or correcting the category.
+8. Analysis history in the interface.
 
-| Etap | Co robisz w projekcie? | Rezultat |
+V1 does not implement: multi-object detection, segmentation, video, a mobile app, login, automatic retraining on corrections. User feedback is saved but does not change the weights automatically.
+
+---
+
+## Full lifecycle — 16 stages
+
+This approach follows the MLOps cycle (data → training → validation → deployment → monitoring → retraining). We implement it gradually across releases V1–V3.
+
+| Stage | What you do in the project | Result |
 | --- | --- | --- |
-| **1. Problem i wymagania** | Użytkownik, scenariusz, 6 klas, ograniczenia, czas odpowiedzi | Specyfikacja, use case’y, kryteria akceptacji |
-| **2. Projekt architektury** | Trening, inferencja, API, frontend, storage; uzasadnienie wyborów | Diagram, ERD, krótkie ADR |
-| **3. Pozyskanie i wersjonowanie danych** | Pobranie TrashNet, wersja, pochodzenie | Skrypt + manifest z sumami kontrolnymi |
-| **4. EDA** | Liczebności, rozdzielczości, uszkodzone pliki, duplikaty, tło | Notebook/raport z wnioskami |
-| **5. Przygotowanie danych** | Stały split train/val/test, preprocessing, augmentacje tylko na train | Pipeline bez przecieku |
-| **6. Model bazowy i eksperymenty** | Porównanie architektur + macierz hiperparametrów | Tabela eksperymentów i wybór modelu |
-| **7. Śledzenie eksperymentów** | Parametry, metryki, dane, commit, wagi | Historia w MLflow (lub równoważnym) |
-| **8. Ewaluacja i analiza błędów** | Macro-F1, per-klasa, confusion matrix; papier–karton; własne zdjęcia | Raport jakości z przykładami |
-| **9. Wyjaśnialność** | Grad-CAM: przedmiot vs tło | Galeria poprawnych i błędnych predykcji |
-| **10. Pakowanie modelu** | Wagi + preprocessing + mapowanie klas = wersjonowany pakiet | Odtwarzalny artefakt do wdrożenia |
-| **11. Serwowanie** | FastAPI, walidacja, błędy, load przy starcie | API + docs + pomiary latency |
-| **12. Aplikacja i feedback** | Upload, wynik, historia, poprawka kategorii | Demo z oryginalną predykcją i osobną poprawką |
-| **13. Testowanie** | Preprocessing, etykiety, API–model–DB, flow użytkownika | Testy automatyczne + raport wydajności |
-| **14. CI/CD i wdrożenie** | Lint/testy, obraz Docker, deploy wersji | Powtarzalne wydanie + rollback |
-| **15. Monitoring** | Błędy, latency, wersja modelu, rozkład predykcji, zweryfikowane poprawki | Dashboard i reguły alertów |
-| **16. Ponowne trenowanie** | Weryfikacja etykiet → nowa wersja danych → kandydat vs produkcja | Kontrolowana aktualizacja modelu |
+| **1. Problem and requirements** | User, scenario, 6 classes, constraints, response time | Specification, use cases, acceptance criteria |
+| **2. Architecture design** | Training, inference, API, frontend, storage; justification of choices | Diagram, ERD, short ADRs |
+| **3. Data acquisition and versioning** | Download TrashNet, version, provenance | Script + manifest with checksums |
+| **4. EDA** | Counts, resolutions, corrupt files, duplicates, background | Notebook/report with conclusions |
+| **5. Data preparation** | Fixed train/val/test split, preprocessing, augmentations on train only | Pipeline without leakage |
+| **6. Baseline model and experiments** | Architecture comparison + hyperparameter matrix | Experiment table and model choice |
+| **7. Experiment tracking** | Parameters, metrics, data, commit, weights | History in MLflow (or equivalent) |
+| **8. Evaluation and error analysis** | Macro-F1, per-class, confusion matrix; paper–cardboard; own photos | Quality report with examples |
+| **9. Explainability** | Grad-CAM: object vs background | Gallery of correct and incorrect predictions |
+| **10. Model packaging** | Weights + preprocessing + class mapping = versioned package | Reproducible artifact for deployment |
+| **11. Serving** | FastAPI, validation, errors, load at startup | API + docs + latency measurements |
+| **12. Application and feedback** | Upload, result, history, category correction | Demo with the original prediction and a separate correction |
+| **13. Testing** | Preprocessing, labels, API–model–DB, user flow | Automated tests + performance report |
+| **14. CI/CD and deployment** | Lint/tests, Docker image, version deploy | Repeatable release + rollback |
+| **15. Monitoring** | Errors, latency, model version, prediction distribution, verified corrections | Dashboard and alert rules |
+| **16. Retraining** | Label verification → new data version → candidate vs production | Controlled model update |
 
-Źródło koncepcji MLOps: [Google Cloud — MLOps](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning).
-
----
-
-## Pięć elementów o największej wartości portfolio
-
-1. **Odtwarzalność eksperymentu** — dane, split, kod, konfiguracja, środowisko; druga osoba może powtórzyć run (z uwzględnieniem niedeterministyczności GPU).
-2. **Porównanie rozwiązań i uzasadnienie** — np. fine-tuning poprawił macro-F1, ale wydłużył trening; wybór udokumentowany pomiarami. Tracker: [MLflow Tracking](https://mlflow.org/docs/latest/ml/tracking).
-3. **Bramka jakości przed wdrożeniem** — nowy model dopiero po progach na jakości, klasach, zgodności API i latency; test set tylko do oceny końcowej.
-4. **Rollback** — przywrócenie poprzedniego pakietu (wagi + preprocessing + mapowanie klas).
-5. **Zamknięcie pętli feedbacku** — poprawka → weryfikacja → nowa wersja danych → kandydat → ocena → dopiero wtedy produkcja.
+Source of the MLOps concept: [Google Cloud — MLOps](https://docs.cloud.google.com/architecture/mlops-continuous-delivery-and-automation-pipelines-in-machine-learning).
 
 ---
 
-## Monitoring — trzy osobne warstwy
+## Five elements with the highest portfolio value
 
-| Rodzaj | Przykładowe pomiary | Wniosek |
+1. **Experiment reproducibility** — data, split, code, configuration, environment; a second person can repeat a run (allowing for GPU nondeterminism).
+2. **Comparing solutions and justification** — e.g. fine-tuning improved macro-F1 but lengthened training; the choice is documented with measurements. Tracker: [MLflow Tracking](https://mlflow.org/docs/latest/ml/tracking).
+3. **Quality gate before deployment** — a new model ships only after passing thresholds on quality, classes, API compatibility and latency; the test set is used only for the final evaluation.
+4. **Rollback** — restoring the previous package (weights + preprocessing + class mapping).
+5. **Closing the feedback loop** — correction → verification → new data version → candidate → evaluation → only then production.
+
+---
+
+## Monitoring — three separate layers
+
+| Type | Example measurements | Conclusion |
 | --- | --- | --- |
-| **Działanie usługi** | Błędy, p95 latency, pamięć | Czy aplikacja działa sprawnie? |
-| **Zmiana danych wejściowych** | Inne tła, jasność, rozkład cech | Czy napływają zdjęcia inne niż trening? |
-| **Jakość predykcji** | Macro-F1 na zweryfikowanych etykietach | Czy model naprawdę klasyfikuje gorzej? |
+| **Service operation** | Errors, p95 latency, memory | Is the application running properly? |
+| **Input data change** | Different backgrounds, brightness, feature distribution | Are photos arriving that differ from training? |
+| **Prediction quality** | Macro-F1 on verified labels | Is the model really classifying worse? |
 
-Zmiana danych lub spadek wyników softmax **nie dowodzi** spadku jakości. Do pomiaru jakości potrzeba poprawnych etykiet; same dobrowolne poprawki użytkowników mogą być niereprezentatywne.
+A data change or a drop in softmax scores **does not prove** a drop in quality. Measuring quality requires correct labels; voluntary user corrections alone may be unrepresentative.
 
 ---
 
-## Wydania: V1 / V2 / V3
+## Releases: V1 / V2 / V3
 
-| Wydanie | Zakres | Cel |
+| Release | Scope | Goal |
 | --- | --- | --- |
-| **V1 — działający produkt** | Dane, EDA, split, baseline + porównanie 2 modeli / hiperparametry (w rozsądnym zakresie), ewaluacja, Grad-CAM, API, prosty UI, historia i feedback | Działające demo z mierzalną jakością |
-| **V2 — warsztat inżynierski** | MLflow, wersjonowanie artefaktów, testy, Docker, CI/CD, wdrożenie, rollback, bramka jakości | Powtarzalne wydania i bezpieczeństwo zmian |
-| **V3 — pełna pętla ML** | Monitoring (3 warstwy), zweryfikowany feedback, retrain, porównanie kandydat vs produkcja | Kontrolowana aktualizacja modelu |
+| **V1 — working product** | Data, EDA, split, baseline + comparison of 2 models / hyperparameters (within reason), evaluation, Grad-CAM, API, simple UI, history and feedback | A working demo with measurable quality |
+| **V2 — engineering workshop** | MLflow, artifact versioning, tests, Docker, CI/CD, deployment, rollback, quality gate | Repeatable releases and safe changes |
+| **V3 — full ML loop** | Monitoring (3 layers), verified feedback, retraining, candidate vs production comparison | Controlled model update |
 
-**Możliwe rozszerzenia (opisane, nie wymagane w V1–V3):** Kubernetes, feature store, rozproszone trenowanie, rozbudowana orkiestracja, testy A/B. Dla jednego CNN i małego zbioru nie dają jeszcze proporcjonalnej korzyści.
-
----
-
-## Model i interpretacja wyników
-
-- Dostosuj warstwę wyjściową do 6 klas.
-- Zapisuj mapowanie indeksów → etykiety razem z wagami.
-- Ten sam deterministyczny preprocessing w ewaluacji i API; augmentacja tylko na train.
-- Softmax prezentuj jako wynik modelu — bez kalibracji nie nazywaj go zweryfikowanym prawdopodobieństwem.
-- Grad-CAM dla wskazanej klasy i warstwy konwolucyjnej; nie wyłączaj autograd na całej ścieżce heatmapy.
-- Model może sklasyfikować nie-odpad do jednej ze znanych klas; próg niskiego wyniku może sugerować ręczną kontrolę, ale nie rozwiązuje open-set.
-
-Grad-CAM wskazuje obszary wpływające na decyzję — nie jest maską obiektu ani dowodem „prawidłowego rozumowania”.
+**Possible extensions (described, not required in V1–V3):** Kubernetes, feature store, distributed training, extensive orchestration, A/B tests. For a single CNN and a small dataset they do not yet bring a proportional benefit.
 
 ---
 
-## Ocena jakości
+## Model and interpreting results
 
-- Stratyfikowany split np. **70/15/15**; zapisz ID zdjęć w każdym podzbiorze.
-- Duplikaty / powiązane zdjęcia: usuń lub trzymaj w tym samym folcie — bez przecieku.
-- Hiperparametry i progi tylko na walidacji; **test wyłącznie do oceny końcowej**.
-- Raportuj: accuracy, **macro-F1**, precision/recall per klasa, confusion matrix.
-- Przykłady poprawnych i błędnych predykcji + heatmapy.
-- Osobny zestaw **własnych zdjęć** (różne tła) — raport oddzielny od testu TrashNet.
-- Zmierz czas predykcji i Grad-CAM na opisanym sprzęcie (GPU/CPU).
+- Adapt the output layer to 6 classes.
+- Save the index → label mapping together with the weights.
+- The same deterministic preprocessing in evaluation and the API; augmentation on train only.
+- Present softmax as a model score — without calibration, do not call it a verified probability.
+- Grad-CAM for the chosen class and convolutional layer; do not disable autograd along the whole heatmap path.
+- The model may classify a non-waste item into one of the known classes; a low-score threshold can suggest manual review, but it does not solve open-set recognition.
 
-Nie zakładamy z góry docelowej skuteczności. Wnioski wynikają z pomiarów — szczególnie dla małej klasy `trash` i zdjęć spoza warunków treningowych.
+Grad-CAM shows the regions that influence the decision — it is not an object mask or proof of "correct reasoning".
 
 ---
 
-## Proponowana architektura
+## Quality evaluation
 
-| Element | Odpowiedzialność | Narzędzia |
+- Stratified split, e.g. **70/15/15**; save the image IDs in each subset.
+- Duplicates / related images: remove them or keep them in the same fold — no leakage.
+- Hyperparameters and thresholds on validation only; **test set only for the final evaluation**.
+- Report: accuracy, **macro-F1**, per-class precision/recall, confusion matrix.
+- Examples of correct and incorrect predictions + heatmaps.
+- A separate set of **own photos** (different backgrounds) — reported separately from the TrashNet test.
+- Measure prediction and Grad-CAM time on the described hardware (GPU/CPU).
+
+We do not assume a target performance in advance. Conclusions come from measurements — especially for the small `trash` class and for photos outside the training conditions.
+
+---
+
+## Proposed architecture
+
+| Element | Responsibility | Tools |
 | --- | --- | --- |
-| Moduł ML | Dane, trening, ewaluacja, predykcja, Grad-CAM | PyTorch + CUDA, torchvision, MLflow |
-| Backend | Walidacja, analizy, historia, feedback | FastAPI |
-| Frontend | Upload, wynik, heatmapa, historia | Do ustalenia |
-| Baza | Metadane analiz i poprawki | PostgreSQL |
-| Środowisko | Lokalne uruchomienie | Docker / Compose |
-| Wdrożenie | Demonstracja | Docelowo GCP Cloud Run |
+| ML module | Data, training, evaluation, prediction, Grad-CAM | PyTorch + CUDA, torchvision, MLflow |
+| Backend | Validation, analyses, history, feedback | FastAPI |
+| Frontend | Upload, result, heatmap, history | To be decided |
+| Database | Analysis metadata and corrections | PostgreSQL |
+| Environment | Local run | Docker / Compose |
+| Deployment | Demonstration | Eventually GCP Cloud Run |
 
-Przepływ: UI → API → walidacja → model + Grad-CAM → zapis → UI. Poprawka użytkownika jest osobnym rekordem; nie zmienia automatycznie wag.
+Flow: UI → API → validation → model + Grad-CAM → save → UI. A user correction is a separate record; it does not change the weights automatically.
 
-Na start: jeden backend, inferencja w procesie, model ładowany przy starcie. Kubernetes / mikroserwisy / kolejki — poza MVP.
+To start: a single backend, in-process inference, model loaded at startup. Kubernetes / microservices / queues are outside the MVP.
 
-Przed Cloud Run: trwały storage (np. GCS) + zewnętrzna baza. Lokalny dysk kontenera nie jest magazynem historii. Retencja i usuwanie zdjęć — jawna decyzja przed publikacją.
+Before Cloud Run: persistent storage (e.g. GCS) + an external database. The container's local disk is not a history store. Image retention and deletion is an explicit decision to make before publishing.
 
 ---
 
-## Proponowany kontrakt API
+## Proposed API contract
 
-Propozycja — nie zakładaj, że endpointy już istnieją.
+A proposal — do not assume the endpoints already exist.
 
-| Metoda i ścieżka | Przeznaczenie |
+| Method and path | Purpose |
 | --- | --- |
-| `GET /health` | Dostępność |
-| `POST /analyses` | Analiza zdjęcia i zapis |
-| `GET /analyses` | Historia (paginacja) |
-| `GET /analyses/{id}` | Pojedyncza analiza |
-| `PUT /analyses/{id}/feedback` | Potwierdzona / poprawiona kategoria |
+| `GET /health` | Availability |
+| `POST /analyses` | Analyze an image and save |
+| `GET /analyses` | History (pagination) |
+| `GET /analyses/{id}` | Single analysis |
+| `PUT /analyses/{id}/feedback` | Confirmed / corrected category |
 
-Wynik: id, data, klasa, wyniki wszystkich klas, wersja modelu, czas, sposób pobrania wizualizacji. Feedback oddzielnie od oryginalnej predykcji.
-
----
-
-## Kolejność implementacji (start → V1)
-
-1. **Dane:** pobranie, QC, manifest, zapis splitu.
-2. **EDA:** notebook z wnioskami.
-3. **Eksperymenty:** 2 modele × warianty A/B → grid hiperparametrów dla finalisty → wybór z uzasadnieniem.
-4. **Predykcja + Grad-CAM** poza webem.
-5. **API** z walidacją i load modelu przy starcie.
-6. **Interfejs** + historia + feedback.
-7. **Dokumentacja** uruchomienia, ograniczeń i rzeczywistych pomiarów.
-
-Każdy etap kończy się weryfikowalnym rezultatem. Nie zaczynaj od rozbudowanej infrastruktury (to V2+).
+Result: id, date, class, scores for all classes, model version, time, how to fetch the visualization. Feedback is kept separate from the original prediction.
 
 ---
 
-## Kryteria ukończenia V1
+## Implementation order (start → V1)
 
-- Analiza poprawnego zdjęcia: kategoria, wyniki klas, Grad-CAM.
-- Błędny plik → czytelny błąd, bez awarii.
-- Analiza w historii; feedback bez nadpisania oryginalnej predykcji.
-- Raport z testu TrashNet + osobna ocena własnych zdjęć.
-- Tabela porównania modeli / hiperparametrów z uzasadnieniem wyboru.
-- Wagi, mapowanie etykiet i preprocessing wersjonowane i odtwarzalne.
-- Dokumentacja opisuje rzeczywiste uruchomienie i pomiary — bez wymyślonych wyników.
+1. **Data:** download, QC, manifest, save the split.
+2. **EDA:** notebook with conclusions.
+3. **Experiments:** 2 models × A/B variants → hyperparameter grid for the finalist → choice with justification.
+4. **Prediction + Grad-CAM** outside the web.
+5. **API** with validation and model load at startup.
+6. **Interface** + history + feedback.
+7. **Documentation** of how to run, limitations and actual measurements.
 
----
-
-## Zasady pracy dla AI
-
-- Przed implementacją sprawdź pliki, zależności i stan repo. Nie zakładaj istnienia kodu z planu.
-- Realizuj najbliższy uzgodniony etap; nie buduj V2/V3 „przy okazji” V1.
-- Oddzielaj trening od kodu serwującego API.
-- Spójność etykiet i preprocessingu trening ↔ inferencja.
-- Nie commituj sekretów, datasetu ani dużych wag. Dokumentuj sposób ich uzyskania.
-- Nie używaj przykładowych wyników jako rzeczywistych predykcji.
-- Adekwatne testy: mapowanie klas, kontrakt API, walidacja plików, połączenie model–aplikacja.
-- Aktualizuj README użytkownika po etapach: co działa, jak uruchomić, ograniczenia.
-- Nie dodawaj komend instalacji/uruchamiania, dopóki odpowiadające pliki nie istnieją i nie zostały sprawdzone.
-- Trening lokalny zakładaj na **CUDA**; CI i deploy bez GPU muszą mieć ścieżkę CPU.
+Each stage ends with a verifiable result. Do not start with elaborate infrastructure (that is V2+).
 
 ---
 
-## Decyzje otwarte
+## V1 completion criteria
 
-- ~~Framework frontendu.~~ **Decyzja (2026-10-28):** demo w **Gradio** (`app.py`), uruchamiane **lokalnie**; wagi w wersjonowanym repo modelu na HF Hub. Hosting odłożony: Gradio Spaces na darmowym CPU wymagają HF PRO, a budżet ma być bliski zera. Prezentacja przez zrzuty ekranu / krótkie wideo. CI = testy w GitHub Actions. FastAPI + Postgres + Cloud Run przesunięte na później (historia i feedback).
-- ~~Dokładny drugi model.~~ Wybrany EfficientNet-B0 — patrz `docs/results.md`.
-- ~~Finalny zakres siatki hiperparametrów.~~ Patrz `docs/results.md`.
-- Przechowywanie i retencja zdjęć / wizualizacji.
-- Próg sugerowania ręcznej weryfikacji (po walidacji).
-- Dostęp do historii i koszty publicznego wdrożenia.
+- Analysis of a valid image: category, class scores, Grad-CAM.
+- Invalid file → clear error, no crash.
+- Analysis in history; feedback without overwriting the original prediction.
+- TrashNet test report + a separate evaluation on own photos.
+- Model / hyperparameter comparison table with justification of the choice.
+- Weights, label mapping and preprocessing versioned and reproducible.
+- Documentation describes the actual run and measurements — no invented results.
 
-**Na teraz:** README pod portfolio (proces inżynierski, nie „ML na gotowym zbiorze”) + zrzuty ekranu / wideo z lokalnego demo.
+---
+
+## Working rules for AI
+
+- Before implementing, check the files, dependencies and repo state. Do not assume code from the plan exists.
+- Work on the nearest agreed stage; do not build V2/V3 "along the way" in V1.
+- Keep training separate from the API serving code.
+- Keep labels and preprocessing consistent between training and inference.
+- Do not commit secrets, the dataset or large weights. Document how to obtain them.
+- Do not use example results as real predictions.
+- Adequate tests: class mapping, API contract, file validation, model–application integration.
+- Update the user-facing README after each stage: what works, how to run it, limitations.
+- Do not add install/run commands until the corresponding files exist and have been checked.
+- Assume local training on **CUDA**; CI and deployment without a GPU must have a CPU path.
+
+---
+
+## Open decisions
+
+- ~~Frontend framework.~~ **Decision (2026-10-28):** demo in **Gradio** (`app.py`), run **locally**; weights in a versioned model repo on the HF Hub. Hosting postponed: Gradio Spaces on the free CPU tier require HF PRO, and the budget should stay close to zero. Presentation via screenshots / a short video. CI = tests in GitHub Actions. FastAPI + Postgres + Cloud Run deferred (history and feedback).
+- ~~The exact second model.~~ EfficientNet-B0 chosen — see `docs/results.md`.
+- ~~Final scope of the hyperparameter grid.~~ See `docs/results.md`.
+- Storage and retention of images / visualizations.
+- Threshold for suggesting manual verification (after validation).
+- History access and the cost of a public deployment.
+
+**For now:** a portfolio README (engineering process, not "ML on a ready-made dataset") + screenshots / video of the local demo.

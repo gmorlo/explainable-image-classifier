@@ -1,84 +1,84 @@
-# SortWise — wyjaśnialny klasyfikator odpadów
+# SortWise — explainable waste classifier
 
-Wgrywasz zdjęcie jednego odpadu, a aplikacja pokazuje trzy najbardziej prawdopodobne kategorie (karton, szkło, metal, papier, plastik, pozostałe) i **heatmapę Grad-CAM**, czyli fragmenty zdjęcia, na które model patrzył przy decyzji.
+Upload a photo of a single waste item and get the three most likely categories (cardboard, glass, metal, paper, plastic, other) together with a **Grad-CAM heatmap** of the parts of the image the model looked at.
 
-![SortWise — poprawna predykcja z heatmapą Grad-CAM](docs/img/app_correct.png)
+![SortWise — correct prediction with a Grad-CAM heatmap](docs/img/app_correct.png)
 
-**Test (TrashNet, 379 zdjęć, użyty raz): macro-F1 0.893 · accuracy 0.910** · EfficientNet-B0 · ~44 ms na zdjęcie z heatmapą na CPU
+**Test set (TrashNet, 379 images, used once): macro-F1 0.893 · accuracy 0.910** · EfficientNet-B0 · ~44 ms per image incl. heatmap on CPU
 
-## Co tu jest poza „wytrenowałem CNN na gotowym zbiorze”
+## More than "trained a CNN on a ready-made dataset"
 
-Sam trening to najmniejsza część projektu. Większość pracy to sprawdzanie, czy wynik jest prawdziwy, powtarzalny i zrozumiały.
+Training was the smallest part. Most of the work went into checking that the result is real, reproducible and understandable.
 
-1. **Audyt danych zamiast zaufania do gotowego zbioru.** Sumy kontrolne SHA-256 wykazały 3 pary identycznych zdjęć z **różnymi etykietami**, np. ten sam plik jako `glass` i `plastic`. Kopie trafiały jednocześnie do zbioru treningowego i walidacyjnego, więc wynik walidacji był zawyżony. Wszystkie 6 plików zostało usuniętych, a ich lista jest zapisana w splicie.
-2. **Powtarzalność wyników.** Ta sama konfiguracja raz dawała 0.896, a raz 0.928 macro-F1. Przyczyna: seed był ustawiany po zbudowaniu modelu, a cuDNN sam dobierał algorytmy. Po poprawce powtórka daje identyczny wynik. Bez tego porównywanie modeli byłoby porównywaniem szumu.
-3. **Wybór modelu na podstawie pomiarów.** 3 architektury × 2 warianty (sama głowa lub fine-tuning ostatniego bloku) porównane pod kątem jakości, rozmiaru wag i czasu na CPU i GPU. Potem siatka 12 kombinacji hiperparametrów i powtórki dwóch najlepszych na 3 seedach. Wybrałem ustawienie **stabilniejsze**, a nie to z najlepszym pojedynczym runem, i opisałem, że różnica mieści się w rozrzucie między seedami.
-4. **Uczciwa ocena.** Główną miarą jest macro-F1, bo klasa `trash` jest 3–4× mniejsza i accuracy by to ukryło. Hiperparametry dobierane były wyłącznie na walidacji. Zbiór testowy został użyty **jeden raz**, na końcu. Spadek z 0.925 (walidacja) do 0.893 (test) jest pokazany, a nie ukryty.
-5. **Grad-CAM jako narzędzie do analizy błędów.** Heatmapy pokazały, że model patrzy na przedmiot, a nie na tło, i wyjaśniły typowe pomyłki. Płaski karton bez falistej struktury wygląda dla modelu jak kartka. Szyjka plastikowej butelki wygląda jak szklana. Model myli się z pewnością 84–100%, dlatego aplikacja pokazuje **top‑3 klasy**, a nie jedną odpowiedź.
-6. **Model jako wersjonowany artefakt.** Wagi, mapowanie klas, konfiguracja i metryki są publikowane razem na HF Hub pod niezmiennym tagiem (`v1`). Aplikacja ładuje wskazaną wersję, więc cofnięcie modelu to zmiana jednej zmiennej. Sprawdziłem, że aplikacja daje te same predykcje co skrypt ewaluacji (60/60 zdjęć testowych).
-7. **Testy w CI.** GitHub Actions przy każdym pushu pilnuje błędów, które psują eksperymenty po cichu: przecieku i duplikatów między splitami, powtarzalności seeda, działania Grad-CAM dla wszystkich modeli i trybów oraz kontraktu predyktora (6 klas, suma wyników 1, poprawny rozmiar heatmapy).
+1. **Data audit instead of trusting the dataset.** SHA-256 checksums revealed 3 pairs of identical images with **different labels** (e.g. the same file as both `glass` and `plastic`). The copies landed in both train and validation, inflating the score. All 6 files were removed, and the list is saved with the split.
+2. **Reproducibility.** The same config gave 0.896 one time and 0.928 the next. Cause: the seed was set after the model was built and cuDNN picked algorithms non-deterministically. After the fix a rerun gives an identical result. Without this, comparing models would have meant comparing noise.
+3. **Model choice backed by measurements.** 3 architectures × 2 variants (head only vs fine-tuning the last stage) compared on quality, weight size and CPU/GPU latency. Then a 12-run hyperparameter grid and the top 2 rerun on 3 seeds. I picked the **more stable** setting over the best single run, and documented that the gap is within seed-to-seed spread.
+4. **Honest evaluation.** Macro-F1 is the main metric because the `trash` class is 3–4× smaller and accuracy would hide it. Hyperparameters were tuned on validation only. The test set was used **once**, at the end. The drop from 0.925 (val) to 0.893 (test) is reported, not hidden.
+5. **Grad-CAM as an error-analysis tool.** Heatmaps confirmed the model looks at the item rather than the background, and explained the typical mistakes: flat cardboard without corrugation looks like a sheet of paper, the neck of a plastic bottle looks like glass. The model is wrong with 84–100% confidence, so the app shows the **top 3 classes** rather than a single answer.
+6. **The model as a versioned artifact.** Weights, label map, config and metrics are published together to the Hugging Face Hub under an immutable tag (`v1`). The app loads a pinned version, so a rollback is one environment variable. I checked that the app reproduces the evaluation script's predictions (60/60 test images).
+7. **Tests in CI.** GitHub Actions runs on every push and guards the failures that silently break experiments: leakage and duplicates across splits, seed reproducibility, Grad-CAM for every model and training mode, and the predictor contract (6 classes, scores sum to 1, correct heatmap shape).
 
-Szczegóły z tabelami, macierzą pomyłek i galeriami heatmap: **[docs/results.md](docs/results.md)**.
+Full tables, confusion matrix and heatmap galleries: **[docs/results.md](docs/results.md)**.
 
-## Gdzie model się myli
+## Where the model fails
 
-![SortWise — błąd: karton rozpoznany jako papier](docs/img/app_error.png)
+![SortWise — error: cardboard predicted as paper](docs/img/app_error.png)
 
-Płaski karton z białym nadrukiem model rozpoznał jako papier z wynikiem 96%, a prawdziwej klasy nie ma nawet w top‑3. Heatmapa skupia się na krawędzi i zagięciu, które wyglądają jak kartka. To najczęstsza pomyłka w teście (5×), obok plastiku branego za szkło.
+A flat piece of cardboard with white print is classified as paper at 96%, and the true class is not even in the top 3. The heatmap focuses on the edge and fold, which look like a sheet of paper. It is the most common test error (5×), alongside plastic mistaken for glass.
 
-| Klasa | F1 (test) | Najczęstszy błąd |
+| Class | F1 (test) | Most common error |
 | --- | ---: | --- |
-| Karton | 0.93 | 5× jako papier |
-| Papier | 0.92 | 3× jako pozostałe |
-| Plastik | 0.92 | 5× jako szkło |
-| Szkło | 0.91 | rzadkie |
-| Metal | 0.91 | 3× jako szkło |
-| Pozostałe (`trash`) | 0.76 | 3× jako papier |
+| Cardboard | 0.93 | 5× as paper |
+| Paper | 0.92 | 3× as other |
+| Plastic | 0.92 | 5× as glass |
+| Glass | 0.91 | rare |
+| Metal | 0.91 | 3× as glass |
+| Other (`trash`) | 0.76 | 3× as paper |
 
-## Ograniczenia
+## Limitations
 
-- TrashNet to pojedyncze przedmioty na jasnym tle. Jak model radzi sobie z innym tłem, oświetleniem czy kilkoma przedmiotami naraz, **nie jest zmierzone**.
-- Model zna tylko 6 klas. Zdjęcie czegoś spoza nich (np. kota) też dostanie jedną z tych kategorii.
-- Wynik softmax to pewność modelu, a nie skalibrowane prawdopodobieństwo.
-- Grad-CAM pokazuje, co podniosło wynik klasy. Nie jest maską obiektu ani dowodem, że model „rozumuje poprawnie”.
-- Heatmapa dotyczy środkowego kadru 224×224, który widzi model, a nie całego wgranego zdjęcia.
+- TrashNet shows single items on a plain light background. Performance on other backgrounds, lighting or several items at once is **not measured**.
+- The model knows only 6 classes. A photo of anything else (e.g. a cat) still gets one of them.
+- The softmax score is the model's confidence, not a calibrated probability.
+- Grad-CAM shows what raised the class score. It is not an object mask or proof that the model "reasons correctly".
+- The heatmap covers the 224×224 centre crop the model sees, not the whole uploaded photo.
 
-## Uruchomienie
+## Run it
 
 ```bash
-# PyTorch z CUDA (sprawdzone na RTX 3070); bez GPU działa zwykły pip install torch torchvision
+# PyTorch with CUDA (tested on an RTX 3070); without a GPU a plain `pip install torch torchvision` works
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 pip install -r requirements.txt && pip install -e .
 
 python app.py   # http://127.0.0.1:7860
 ```
 
-Aplikacja bierze model z `artifacts/runs/final/efficientnet_b0`, a inny katalog wskazuje zmienna `SORTWISE_RUN_DIR`. Jeśli lokalnych wag nie ma, pobiera pakiet z HF Hub (`SORTWISE_MODEL_REPO`, domyślnie `gmorlo/sortwise-efficientnet-b0`, na razie prywatne) w wersji `SORTWISE_MODEL_VERSION` (domyślnie `v1`). Nową wersję publikuje `python scripts/publish_model.py --tag v2`, a tagi są niezmienne.
+The app loads the model from `artifacts/runs/final/efficientnet_b0`; `SORTWISE_RUN_DIR` points to another run. Without local weights it downloads the package from the Hugging Face Hub (`SORTWISE_MODEL_REPO`, default `gmorlo/sortwise-efficientnet-b0`) at version `SORTWISE_MODEL_VERSION` (default `v1`). A new version is published with `python scripts/publish_model.py --tag v2`; tags are immutable.
 
-Pełne odtworzenie (dane → split → trening → ewaluacja → galerie Grad-CAM): sekcja „Odtworzenie” w [docs/results.md](docs/results.md). Testy: `pytest tests`.
+Full reproduction (data → split → training → evaluation → Grad-CAM galleries): the "Reproduce" section in [docs/results.md](docs/results.md). Tests: `pytest tests`.
 
-Czas analizy jednego zdjęcia (predykcja + Grad-CAM, mediana): ~44 ms na CPU desktopa, ~35 ms na RTX 3070.
+Latency per image (prediction + Grad-CAM, median): ~44 ms on a desktop CPU, ~35 ms on an RTX 3070.
 
 ## Stack
 
-PyTorch + torchvision (CUDA do treningu, CPU do inferencji) · EfficientNet-B0 · Grad-CAM (własna implementacja na hookach) · scikit-learn (metryki, split) · Gradio · Hugging Face Hub (wersjonowanie modelu) · GitHub Actions · pytest
+PyTorch + torchvision (CUDA for training, CPU for inference) · EfficientNet-B0 · Grad-CAM (own hook-based implementation) · scikit-learn (metrics, split) · Gradio · Hugging Face Hub (model versioning) · GitHub Actions · pytest
 
-## Struktura
+## Layout
 
 ```
 src/sortwise/
-  data/        pobranie TrashNet, manifest z SHA-256, deduplikacja, stratyfikowany split, transformacje
-  models/      backbony (ResNet18, EfficientNet-B0, MobileNetV3) z trybami head/finetune
-  training/    pętla treningowa, early stopping na macro-F1, seed, metryki
-  explain/     Grad-CAM i nakładanie heatmapy
-  inference.py ładowanie wersjonowanego modelu + predykcja z heatmapą
-scripts/       trening, porównanie modeli, grid search, ewaluacja, galerie, publikacja modelu
-app.py         demo Gradio
-docs/          wyniki, wnioski, wykresy
+  data/        TrashNet download, SHA-256 manifest, dedup, stratified split, transforms
+  models/      backbones (ResNet18, EfficientNet-B0, MobileNetV3) with head/finetune modes
+  training/    training loop, early stopping on macro-F1, seeding, metrics
+  explain/     Grad-CAM and heatmap overlay
+  inference.py loads a versioned model + prediction with heatmap
+scripts/       training, model comparison, grid search, evaluation, galleries, model publishing
+app.py         Gradio demo
+docs/          results, findings, figures
 ```
 
-## Dalej
+## Next
 
-Historia analiz i poprawianie kategorii przez użytkownika, ocena na własnych zdjęciach z innym tłem, demo w przeglądarce bez serwera (ONNX).
+Analysis history and user corrections, evaluation on own photos with other backgrounds, an in-browser demo without a server (ONNX).
 
-Dane: [TrashNet](https://github.com/garythung/trashnet) (Gary Thung, Mindy Yang).
+Data: [TrashNet](https://github.com/garythung/trashnet) (Gary Thung, Mindy Yang).
