@@ -74,10 +74,27 @@ Wnioski:
 - `trash` jest najsłabszy przez małą liczbę przykładów (20 w teście) i brak jednego wyglądu klasy.
 - TrashNet to głównie przedmioty na jasnym tle — wynik nie mówi, jak model działa na zdjęciach z innym tłem (osobny test na własnych zdjęciach: do zrobienia).
 
+## 5. Wyjaśnialność: Grad-CAM
+
+Heatmapa pokazuje, które obszary zdjęcia najbardziej podniosły wynik przewidzianej klasy (ostatni blok konwolucyjny, `features[-1]` w EfficientNet-B0). To wskazówka, gdzie model „patrzy” — nie maska obiektu ani dowód poprawnego rozumowania.
+
+![Grad-CAM — poprawne predykcje](img/gradcam_correct.png)
+
+Przy poprawnych predykcjach model patrzy na sam przedmiot (szyjka butelki, puszka, ogryzek), nie na białe tło.
+
+![Grad-CAM — błędy](img/gradcam_errors.png)
+
+Wnioski z błędów:
+- **Karton → papier:** pomylone są płaskie, cienkie lub białe kawałki kartonu; model patrzy na krawędzie i zagięcia, które wyglądają jak kartka. Brak falistej struktury na zdjęciu = brak wskazówki „karton”.
+- **Plastik → szkło:** przezroczyste i zielone butelki oglądane od strony szyjki; heatmapa skupia się na okrągłym otworze — kształcie typowym dla butelek szklanych.
+- **Metal → szkło:** błyszczące, odbijające światło puszki.
+- Wiele błędów ma **wysoki wynik softmax (84–100%)**. Model jest pewny siebie nawet gdy się myli, więc sam próg pewności słabo wyłapie błędy — w aplikacji warto pokazywać top-3 klasy, nie tylko jedną.
+
 ## Odtworzenie
 
 ```bash
 python scripts/prepare_split.py
 python scripts/train.py --config configs/final_efficientnet_b0.yaml --variant finetune --run-name final/efficientnet_b0
 python scripts/evaluate.py
+python scripts/gradcam_gallery.py
 ```

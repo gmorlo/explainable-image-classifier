@@ -15,6 +15,7 @@ class ModelSpec:
     replace_head: Callable[[nn.Module, int], None]
     head_prefixes: tuple[str, ...]
     finetune_prefixes: tuple[str, ...]  # last stage, trained together with the head
+    cam_layer: Callable[[nn.Module], nn.Module]  # last conv block, used by Grad-CAM
 
 
 def _resnet18_head(model: nn.Module, num_classes: int) -> None:
@@ -32,18 +33,21 @@ MODEL_SPECS: dict[str, ModelSpec] = {
         replace_head=_resnet18_head,
         head_prefixes=("fc.",),
         finetune_prefixes=("layer4.",),
+        cam_layer=lambda m: m.layer4,
     ),
     "efficientnet_b0": ModelSpec(
         build=lambda: models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT),
         replace_head=_last_linear_head,
         head_prefixes=("classifier.",),
         finetune_prefixes=("features.6.", "features.7.", "features.8."),
+        cam_layer=lambda m: m.features[-1],
     ),
     "mobilenet_v3_small": ModelSpec(
         build=lambda: models.mobilenet_v3_small(weights=models.MobileNet_V3_Small_Weights.DEFAULT),
         replace_head=_last_linear_head,
         head_prefixes=("classifier.",),
         finetune_prefixes=("features.9.", "features.10.", "features.11.", "features.12."),
+        cam_layer=lambda m: m.features[-1],
     ),
 }
 

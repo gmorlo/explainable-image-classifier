@@ -39,7 +39,21 @@ def test_same_seed_builds_same_head():
     assert torch.equal(a.classifier[-1].weight, b.classifier[-1].weight)
 
 
+def test_grad_cam_works_for_frozen_and_finetuned_models():
+    from sortwise.explain.gradcam import grad_cam
+    from sortwise.models.factory import MODEL_SPECS
+
+    x = torch.randn(1, 3, 224, 224)
+    for name in MODEL_SPECS:
+        for trainable in ("head", "finetune"):
+            model = build_model(name, trainable=trainable)
+            cam, probs = grad_cam(model, x, MODEL_SPECS[name].cam_layer(model))
+            assert cam.shape == (224, 224) and 0.0 <= cam.min() and cam.max() <= 1.0, (name, trainable)
+            assert abs(float(probs.sum()) - 1.0) < 1e-4
+
+
 if __name__ == "__main__":
     test_split_drops_duplicates_and_has_no_overlap()
     test_same_seed_builds_same_head()
+    test_grad_cam_works_for_frozen_and_finetuned_models()
     print("OK")
