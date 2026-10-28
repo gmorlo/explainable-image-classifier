@@ -1,4 +1,4 @@
-"""Train ResNet18 variants (head-only or layer4 fine-tune) on TrashNet."""
+"""Train model variants (head-only or last-stage fine-tune) on TrashNet."""
 
 from __future__ import annotations
 
@@ -15,7 +15,7 @@ if str(SRC) not in sys.path:
 
 from sortwise.config import CONFIGS_DIR
 from sortwise.data.dataset import create_dataloaders
-from sortwise.models.resnet import build_resnet18
+from sortwise.models.factory import build_model
 from sortwise.training.trainer import TrainConfig, train_model
 
 
@@ -48,7 +48,8 @@ def run_variant(cfg_doc: dict, variant: str) -> dict:
         batch_size=train_cfg.batch_size,
         num_workers=train_cfg.num_workers,
     )
-    model = build_resnet18(
+    model = build_model(
+        train_cfg.model_name,
         num_classes=train_cfg.num_classes,
         trainable=train_cfg.trainable,
     )
@@ -60,7 +61,7 @@ def run_variant(cfg_doc: dict, variant: str) -> dict:
             "trainable": train_cfg.trainable,
         },
     }
-    print(f"=== Training variant={variant} trainable={train_cfg.trainable} lr={train_cfg.lr} ===")
+    print(f"=== Training model={train_cfg.model_name} variant={variant} trainable={train_cfg.trainable} lr={train_cfg.lr} ===")
     result = train_model(model, loaders, train_cfg, config_snapshot=snapshot)
     print(f"Done. run_dir={result['run_dir']}")
     print(
@@ -82,7 +83,7 @@ def main() -> int:
         "--variant",
         choices=["head", "finetune", "both"],
         default="both",
-        help="Which ResNet18 variant to train",
+        help="Which variant to train",
     )
     args = parser.parse_args()
 

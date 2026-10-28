@@ -17,7 +17,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from sortwise.config import CLASS_NAMES, RUNS_DIR
-from sortwise.models.resnet import count_trainable_parameters
+from sortwise.models.factory import count_trainable_parameters
 from sortwise.training.metrics import classification_metrics
 
 
@@ -128,7 +128,7 @@ def train_model(
     optimizer = torch.optim.Adam(params, lr=cfg.lr, weight_decay=cfg.weight_decay)
 
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    run_id = run_name or f"resnet18_{cfg.variant}_{stamp}"
+    run_id = run_name or f"{cfg.model_name}_{cfg.variant}_{stamp}"
     run_dir = RUNS_DIR / run_id
     run_dir.mkdir(parents=True, exist_ok=True)
 
@@ -182,6 +182,7 @@ def train_model(
             torch.save(
                 {
                     "model_state_dict": model.state_dict(),
+                    "model_name": cfg.model_name,
                     "variant": cfg.variant,
                     "trainable": cfg.trainable,
                     "epoch": epoch,
@@ -223,6 +224,7 @@ def train_model(
 
     metrics = {
         "run_id": run_id,
+        "model_name": cfg.model_name,
         "variant": cfg.variant,
         "trainable": cfg.trainable,
         "best_epoch": best_epoch,

@@ -1,5 +1,5 @@
 """Model builders."""
 
-from sortwise.models.resnet import build_resnet18, count_trainable_parameters
+from sortwise.models.factory import MODEL_SPECS, build_model, count_trainable_parameters
 
-__all__ = ["build_resnet18", "count_trainable_parameters"]
+__all__ = ["MODEL_SPECS", "build_model", "count_trainable_parameters"]

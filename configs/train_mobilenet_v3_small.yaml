@@ -1,0 +1,16 @@
+seed: 42
+model: mobilenet_v3_small
+num_classes: 6
+batch_size: 32
+num_workers: 0
+max_epochs: 25
+patience: 5
+optimizer: adam
+weight_decay: 1.0e-4
+variants:
+  head:
+    lr: 1.0e-3
+    trainable: head
+  finetune:
+    lr: 1.0e-4
+    trainable: finetune
