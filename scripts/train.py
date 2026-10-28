@@ -86,13 +86,20 @@ def main() -> int:
         default="both",
         help="Which variant to train",
     )
+    parser.add_argument(
+        "--run-name",
+        default=None,
+        help="Run directory under artifacts/runs (single variant only), e.g. final/efficientnet_b0",
+    )
     args = parser.parse_args()
+    if args.run_name and args.variant == "both":
+        raise SystemExit("--run-name needs a single --variant")
 
     cfg_doc = load_yaml(args.config)
     variants = ["head", "finetune"] if args.variant == "both" else [args.variant]
     results = []
     for variant in variants:
-        results.append(run_variant(cfg_doc, variant))
+        results.append(run_variant(cfg_doc, variant, run_name=args.run_name))
 
     if len(results) == 2:
         # Defer comparison to compare_variants.py using latest runs;

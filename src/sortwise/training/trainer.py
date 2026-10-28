@@ -78,6 +78,8 @@ def evaluate(
 
     metrics = classification_metrics(y_true, y_pred, class_names=CLASS_NAMES)
     metrics["loss"] = total_loss / max(n_batches, 1)
+    metrics["y_true"] = y_true
+    metrics["y_pred"] = y_pred
     return metrics
 
 
