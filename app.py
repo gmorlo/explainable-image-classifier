@@ -15,6 +15,16 @@ from sortwise.inference import load_predictor
 from sortwise.training.trainer import get_device
 
 RUN_DIR = Path(os.environ.get("SORTWISE_RUN_DIR", RUNS_DIR / "final" / "efficientnet_b0"))
+MODEL_REPO = os.environ.get("SORTWISE_MODEL_REPO", "gmorlo/sortwise-efficientnet-b0")
+MODEL_VERSION = os.environ.get("SORTWISE_MODEL_VERSION", "v1")  # rollback = set an older tag
+
+if (RUN_DIR / "best.pt").exists():
+    MODEL_LABEL = f"lokalny run `{RUN_DIR.name}`"
+else:  # e.g. on HF Spaces, where weights are not in Git
+    from huggingface_hub import snapshot_download
+
+    RUN_DIR = Path(snapshot_download(MODEL_REPO, revision=MODEL_VERSION))
+    MODEL_LABEL = f"`{MODEL_REPO}@{MODEL_VERSION}`"
 predictor = load_predictor(RUN_DIR, get_device())
 
 
@@ -28,7 +38,8 @@ def analyze(image):
 with gr.Blocks(title="SortWise") as demo:
     gr.Markdown(
         "# SortWise\n"
-        "Klasyfikacja jednego odpadu na zdjęciu do 6 kategorii (TrashNet) z mapą Grad-CAM."
+        "Klasyfikacja jednego odpadu na zdjęciu do 6 kategorii (TrashNet) z mapą Grad-CAM.  \n"
+        f"Model: {MODEL_LABEL}"
     )
     with gr.Row():
         with gr.Column():

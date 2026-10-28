@@ -15,7 +15,9 @@ Porównanie modeli, dobór hiperparametrów, macierz pomyłek i heatmapy Grad-CA
 
 ## Demo lokalnie
 
-Wymaga wytrenowanego modelu w `artifacts/runs/final/efficientnet_b0` (patrz „Odtworzenie” w [docs/results.md](docs/results.md)); inny katalog runu można wskazać zmienną `SORTWISE_RUN_DIR`.
+Aplikacja bierze model z `artifacts/runs/final/efficientnet_b0` (patrz „Odtworzenie” w [docs/results.md](docs/results.md)); inny katalog runu wskazuje zmienna `SORTWISE_RUN_DIR`.
+Jeśli lokalnych wag nie ma, pobiera wersjonowany pakiet modelu z HF Hub (`SORTWISE_MODEL_REPO`, domyślnie `gmorlo/sortwise-efficientnet-b0`, na razie prywatne) w wersji `SORTWISE_MODEL_VERSION` (domyślnie `v1`). Rollback = ustawienie starszego tagu.
+Nową wersję modelu publikuje `python scripts/publish_model.py --tag v2` (tagi są niezmienne).
 
 ```bash
 python app.py   # http://127.0.0.1:7860
