@@ -16,7 +16,7 @@ if str(SRC) not in sys.path:
 from sortwise.config import CONFIGS_DIR
 from sortwise.data.dataset import create_dataloaders
 from sortwise.models.factory import build_model
-from sortwise.training.trainer import TrainConfig, train_model
+from sortwise.training.trainer import TrainConfig, set_seed, train_model
 
 
 def load_yaml(path: Path) -> dict:
@@ -44,6 +44,7 @@ def run_variant(cfg_doc: dict, variant: str, run_name: str | None = None) -> dic
         optimizer_name=str(cfg_doc.get("optimizer", "adam")),
     )
 
+    set_seed(train_cfg.seed)  # before build_model, so the new head starts from the same weights
     loaders = create_dataloaders(
         batch_size=train_cfg.batch_size,
         num_workers=train_cfg.num_workers,

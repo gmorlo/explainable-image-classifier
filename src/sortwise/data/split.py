@@ -14,6 +14,23 @@ from sortwise.config import SPLIT_RATIOS, SPLIT_SEED, SPLITS_DIR
 from sortwise.data.manifest import load_manifest
 
 
+def drop_duplicates(files: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """
+    Keep one copy of byte-identical images (same sha256).
+
+    Copies with different classes have an unknown true label, so all of them are dropped.
+    Without this, one copy can land in train and another in val (leak + label noise).
+    """
+    by_hash: dict[str, list[dict[str, Any]]] = {}
+    for f in files:
+        by_hash.setdefault(f["sha256"], []).append(f)
+    return [
+        group[0]
+        for group in by_hash.values()
+        if len({f["class"] for f in group}) == 1
+    ]
+
+
 def create_stratified_split(
     manifest: dict[str, Any] | None = None,
     *,
@@ -25,7 +42,7 @@ def create_stratified_split(
     ratios = ratios or SPLIT_RATIOS
     seed = SPLIT_SEED if seed is None else seed
 
-    usable = [f for f in data["files"] if f.get("ok", True)]
+    usable = drop_duplicates([f for f in data["files"] if f.get("ok", True)])
     if not usable:
         raise ValueError("No usable files in manifest for splitting")
 
@@ -91,6 +108,7 @@ def save_splits(
         "class_counts": {
             name: _counts_by_class(ids, id_to_class) for name, ids in splits.items()
         },
+        "excluded": sorted(set(id_to_class) - {i for ids in splits.values() for i in ids}),
         "splits": splits,
     }
 
