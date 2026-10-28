@@ -12,3 +12,14 @@ Robocza nazwa: **SortWise**.
 
 EfficientNet-B0 (fine-tuning) na zbiorze testowym TrashNet: **macro-F1 0.893, accuracy 0.910**.
 Porównanie modeli, dobór hiperparametrów, macierz pomyłek i heatmapy Grad-CAM: [docs/results.md](docs/results.md).
+
+## Demo lokalnie
+
+Wymaga wytrenowanego modelu w `artifacts/runs/final/efficientnet_b0` (patrz „Odtworzenie” w [docs/results.md](docs/results.md)); inny katalog runu można wskazać zmienną `SORTWISE_RUN_DIR`.
+
+```bash
+python app.py   # http://127.0.0.1:7860
+```
+
+Wgraj zdjęcie jednego przedmiotu → top-3 klasy (wynik softmax) i heatmapa Grad-CAM dla klasy top-1.
+Czas analizy jednego zdjęcia (predykcja + Grad-CAM, mediana z 57 zdjęć): ~44 ms na CPU desktopa, ~35 ms na RTX 3070.

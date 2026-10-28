@@ -52,8 +52,27 @@ def test_grad_cam_works_for_frozen_and_finetuned_models():
             assert abs(float(probs.sum()) - 1.0) < 1e-4
 
 
+def test_predictor_returns_all_classes_and_heatmap():
+    import numpy as np
+    from PIL import Image
+
+    from sortwise.config import CLASS_LABELS_PL, CLASS_NAMES
+    from sortwise.inference import Predictor
+    from sortwise.models.factory import MODEL_SPECS
+
+    model = build_model("mobilenet_v3_small", trainable="finetune")
+    predictor = Predictor(model, MODEL_SPECS["mobilenet_v3_small"].cam_layer(model), list(CLASS_NAMES),
+                          torch.device("cpu"))
+    image = Image.fromarray(np.random.randint(0, 255, (300, 400, 4), dtype=np.uint8))  # RGBA, non-square
+    scores, heatmap = predictor.predict(image)
+    assert list(scores) == list(CLASS_NAMES) and set(CLASS_LABELS_PL) == set(CLASS_NAMES)
+    assert abs(sum(scores.values()) - 1.0) < 1e-4
+    assert heatmap.shape == (224, 224, 3) and 0.0 <= heatmap.min() and heatmap.max() <= 1.0
+
+
 if __name__ == "__main__":
     test_split_drops_duplicates_and_has_no_overlap()
     test_same_seed_builds_same_head()
     test_grad_cam_works_for_frozen_and_finetuned_models()
+    test_predictor_returns_all_classes_and_heatmap()
     print("OK")

@@ -285,11 +285,11 @@ Każdy etap kończy się weryfikowalnym rezultatem. Nie zaczynaj od rozbudowanej
 
 ## Decyzje otwarte
 
-- Framework frontendu.
-- Dokładny drugi model (EfficientNet-B0 vs MobileNetV3) — decyzja po pierwszym porównaniu rozmiaru/czasu.
-- Finalny zakres siatki hiperparametrów (zależny od VRAM i czasu).
+- ~~Framework frontendu.~~ **Decyzja (2026-10-28):** demo w **Gradio** (`app.py`), wdrożenie na **HF Spaces** z podziałem dev/prod (branch `dev` → Space dev, `main` → Space prod), wagi w repo modelu na HF Hub. FastAPI + Postgres + Cloud Run przesunięte na później (historia i feedback).
+- ~~Dokładny drugi model.~~ Wybrany EfficientNet-B0 — patrz `docs/results.md`.
+- ~~Finalny zakres siatki hiperparametrów.~~ Patrz `docs/results.md`.
 - Przechowywanie i retencja zdjęć / wizualizacji.
 - Próg sugerowania ręcznej weryfikacji (po walidacji).
-- Szczegóły publicznego wdrożenia, dostępu do historii i kosztów.
+- Dostęp do historii i koszty publicznego wdrożenia.
 
-**Na teraz:** przygotowanie TrashNet, EDA, split, pierwsze treningi CUDA (ResNet18) i plan porównania z drugim modelem. Pozostałe decyzje — gdy są potrzebne do kolejnego etapu.
+**Na teraz:** aplikacja Gradio lokalnie → pakiet modelu na HF Hub → Spaces dev/prod (na razie prywatne).
