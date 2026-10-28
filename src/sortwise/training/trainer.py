@@ -7,7 +7,6 @@ import random
 import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
-from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -135,7 +134,8 @@ def train_model(
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     run_id = run_name or f"{cfg.model_name}_{cfg.variant}_{stamp}"
     run_dir = RUNS_DIR / run_id
-    run_dir.mkdir(parents=True, exist_ok=True)
+    # A named run must start empty: stale test_metrics.json next to new weights would be published as theirs.
+    run_dir.mkdir(parents=True, exist_ok=run_name is None)
 
     label_map = {
         "class_names": list(CLASS_NAMES),

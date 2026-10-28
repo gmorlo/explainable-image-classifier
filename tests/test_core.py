@@ -33,9 +33,9 @@ def test_split_drops_duplicates_and_has_no_overlap():
 
 def test_same_seed_builds_same_head():
     set_seed(42)
-    a = build_model("mobilenet_v3_small", trainable="finetune")
+    a = build_model("mobilenet_v3_small", trainable="finetune", pretrained=False)
     set_seed(42)
-    b = build_model("mobilenet_v3_small", trainable="finetune")
+    b = build_model("mobilenet_v3_small", trainable="finetune", pretrained=False)
     assert torch.equal(a.classifier[-1].weight, b.classifier[-1].weight)
 
 
@@ -46,7 +46,7 @@ def test_grad_cam_works_for_frozen_and_finetuned_models():
     x = torch.randn(1, 3, 224, 224)
     for name in MODEL_SPECS:
         for trainable in ("head", "finetune"):
-            model = build_model(name, trainable=trainable)
+            model = build_model(name, trainable=trainable, pretrained=False)
             cam, probs = grad_cam(model, x, MODEL_SPECS[name].cam_layer(model))
             assert cam.shape == (224, 224) and 0.0 <= cam.min() and cam.max() <= 1.0, (name, trainable)
             assert abs(float(probs.sum()) - 1.0) < 1e-4
@@ -60,7 +60,7 @@ def test_predictor_returns_all_classes_and_heatmap():
     from sortwise.inference import Predictor
     from sortwise.models.factory import MODEL_SPECS
 
-    model = build_model("mobilenet_v3_small", trainable="finetune")
+    model = build_model("mobilenet_v3_small", trainable="finetune", pretrained=False)
     predictor = Predictor(model, MODEL_SPECS["mobilenet_v3_small"].cam_layer(model), list(CLASS_NAMES),
                           torch.device("cpu"))
     image = Image.fromarray(np.random.randint(0, 255, (300, 400, 4), dtype=np.uint8))  # RGBA, non-square

@@ -12,7 +12,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import torch
 from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -22,7 +21,7 @@ if str(SRC) not in sys.path:
 
 from sortwise.config import CLASS_NAMES, DATASET_DIR, RUNS_DIR, SPLITS_PATH
 from sortwise.explain.gradcam import grad_cam, overlay, preprocess
-from sortwise.models.factory import MODEL_SPECS, build_model
+from sortwise.inference import load_predictor
 from sortwise.training.trainer import get_device
 
 
@@ -59,15 +58,10 @@ def main() -> int:
     parser.add_argument("--max-errors", type=int, default=12)
     args = parser.parse_args()
 
-    train_cfg = json.loads((args.run / "train_config.json").read_text(encoding="utf-8"))
     test = json.loads((args.run / "test_metrics.json").read_text(encoding="utf-8"))
-    ckpt = torch.load(args.run / "best.pt", map_location="cpu", weights_only=False)
-    model_name = train_cfg["model_name"]
-    model = build_model(model_name, trainable=ckpt["trainable"])
-    model.load_state_dict(ckpt["model_state_dict"])
     device = get_device()
-    model.to(device)
-    layer = MODEL_SPECS[model_name].cam_layer(model)
+    predictor = load_predictor(args.run, device)
+    model, layer = predictor.model, predictor.cam_layer
 
     error_paths = {e["path"] for e in test["errors"]}
     splits = json.loads(SPLITS_PATH.read_text(encoding="utf-8"))

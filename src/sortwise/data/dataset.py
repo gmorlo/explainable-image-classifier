@@ -28,7 +28,6 @@ class TrashNetDataset(Dataset):
         self.split = split
         self.dataset_dir = dataset_dir or DATASET_DIR
         self.class_to_idx = {name: i for i, name in enumerate(CLASS_NAMES)}
-        self.idx_to_class = {i: name for name, i in self.class_to_idx.items()}
 
         splits_file = splits_path or SPLITS_PATH
         if not splits_file.is_file():

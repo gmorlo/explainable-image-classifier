@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Callable
+from typing import Any, Callable
 
 import torch.nn as nn
 from torchvision import models
@@ -11,7 +11,8 @@ from torchvision import models
 
 @dataclass(frozen=True)
 class ModelSpec:
-    build: Callable[[], nn.Module]
+    build: Callable[..., nn.Module]  # torchvision constructor taking weights=
+    weights: Any  # ImageNet weights enum
     replace_head: Callable[[nn.Module, int], None]
     head_prefixes: tuple[str, ...]
     finetune_prefixes: tuple[str, ...]  # last stage, trained together with the head
@@ -29,21 +30,24 @@ def _last_linear_head(model: nn.Module, num_classes: int) -> None:
 
 MODEL_SPECS: dict[str, ModelSpec] = {
     "resnet18": ModelSpec(
-        build=lambda: models.resnet18(weights=models.ResNet18_Weights.DEFAULT),
+        build=models.resnet18,
+        weights=models.ResNet18_Weights.DEFAULT,
         replace_head=_resnet18_head,
         head_prefixes=("fc.",),
         finetune_prefixes=("layer4.",),
         cam_layer=lambda m: m.layer4,
     ),
     "efficientnet_b0": ModelSpec(
-        build=lambda: models.efficientnet_b0(weights=models.EfficientNet_B0_Weights.DEFAULT),
+        build=models.efficientnet_b0,
+        weights=models.EfficientNet_B0_Weights.DEFAULT,
         replace_head=_last_linear_head,
         head_prefixes=("classifier.",),
         finetune_prefixes=("features.6.", "features.7.", "features.8."),
         cam_layer=lambda m: m.features[-1],
     ),
     "mobilenet_v3_small": ModelSpec(
-        build=lambda: models.mobilenet_v3_small(weights=models.MobileNet_V3_Small_Weights.DEFAULT),
+        build=models.mobilenet_v3_small,
+        weights=models.MobileNet_V3_Small_Weights.DEFAULT,
         replace_head=_last_linear_head,
         head_prefixes=("classifier.",),
         finetune_prefixes=("features.9.", "features.10.", "features.11.", "features.12."),
@@ -59,13 +63,15 @@ def count_trainable_parameters(model: nn.Module) -> int:
     return sum(p.numel() for p in model.parameters() if p.requires_grad)
 
 
-def build_model(name: str, num_classes: int = 6, *, trainable: str = "head") -> nn.Module:
+def build_model(name: str, num_classes: int = 6, *, trainable: str = "head", pretrained: bool = True) -> nn.Module:
     """
     Build a pretrained backbone with a fresh head.
 
     trainable:
       - "head": freeze backbone, train classifier only
       - "finetune": train last stage + classifier
+
+    pretrained=False skips the ImageNet download (use when a checkpoint is loaded right after).
     """
     if name not in MODEL_SPECS:
         raise ValueError(f"Unknown model {name!r}. Choose from: {list(MODEL_SPECS)}")
@@ -78,7 +84,7 @@ def build_model(name: str, num_classes: int = 6, *, trainable: str = "head") -> 
     else:
         raise ValueError(f"Unknown trainable mode: {trainable!r}")
 
-    model = spec.build()
+    model = spec.build(weights=spec.weights if pretrained else None)
     spec.replace_head(model, num_classes)
     for param_name, param in model.named_parameters():
         param.requires_grad = param_name.startswith(prefixes)

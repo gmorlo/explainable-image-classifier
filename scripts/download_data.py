@@ -29,7 +29,7 @@ def main() -> int:
 
     manifest = build_manifest(dataset_dir)
     print(summarize_manifest(manifest))
-    print(f"Manifest written.")
+    print("Manifest written.")
     return 0
 
 

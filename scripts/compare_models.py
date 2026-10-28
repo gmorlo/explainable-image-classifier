@@ -18,7 +18,7 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from sortwise.config import COMPARISONS_DIR, RUNS_DIR
-from sortwise.models.factory import build_model
+from sortwise.inference import load_predictor
 
 
 def _load_json(path: Path) -> dict:
@@ -79,9 +79,7 @@ def main() -> int:
             "gpu_name": metrics.get("gpu_name"),
         }
         if not args.skip_latency:
-            ckpt = torch.load(run_dir / "best.pt", map_location="cpu", weights_only=False)
-            model = build_model(model_name, trainable=ckpt["trainable"])
-            model.load_state_dict(ckpt["model_state_dict"])
+            model = load_predictor(run_dir).model
             row["cpu_ms"] = measure_latency_ms(model, torch.device("cpu"))
             if torch.cuda.is_available():
                 row["gpu_ms"] = measure_latency_ms(model, torch.device("cuda"))

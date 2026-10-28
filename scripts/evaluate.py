@@ -11,7 +11,6 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import torch
 import torch.nn as nn
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 from torch.utils.data import DataLoader
@@ -23,7 +22,7 @@ if str(SRC) not in sys.path:
 
 from sortwise.config import CLASS_NAMES, RUNS_DIR
 from sortwise.data.dataset import TrashNetDataset
-from sortwise.models.factory import build_model
+from sortwise.inference import load_predictor
 from sortwise.training.trainer import evaluate, get_device
 
 
@@ -33,15 +32,11 @@ def main() -> int:
     args = parser.parse_args()
 
     run_dir = args.run
-    train_cfg = json.loads((run_dir / "train_config.json").read_text(encoding="utf-8"))
-    ckpt = torch.load(run_dir / "best.pt", map_location="cpu", weights_only=False)
-    model = build_model(train_cfg["model_name"], trainable=ckpt["trainable"])
-    model.load_state_dict(ckpt["model_state_dict"])
-
     device = get_device()
+    model = load_predictor(run_dir, device).model
     test_ds = TrashNetDataset("test")
     loader = DataLoader(test_ds, batch_size=32, shuffle=False, num_workers=0)
-    m = evaluate(model.to(device), loader, nn.CrossEntropyLoss(), device)
+    m = evaluate(model, loader, nn.CrossEntropyLoss(), device)
 
     cm = confusion_matrix(m["y_true"], m["y_pred"], labels=list(range(len(CLASS_NAMES))))
     # shuffle=False keeps loader order == dataset.samples order, so index i is the same image.

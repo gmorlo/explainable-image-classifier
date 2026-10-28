@@ -36,7 +36,7 @@ def load_predictor(run_dir: Path, device: torch.device | None = None) -> Predict
     model_name = json.loads((run_dir / "train_config.json").read_text(encoding="utf-8"))["model_name"]
     class_names = json.loads((run_dir / "label_map.json").read_text(encoding="utf-8"))["class_names"]
     ckpt = torch.load(run_dir / "best.pt", map_location="cpu", weights_only=True)
-    model = build_model(model_name, num_classes=len(class_names), trainable=ckpt["trainable"])
+    model = build_model(model_name, num_classes=len(class_names), trainable=ckpt["trainable"], pretrained=False)
     model.load_state_dict(ckpt["model_state_dict"])
     model.to(device).eval()
     return Predictor(model, MODEL_SPECS[model_name].cam_layer(model), class_names, device)

@@ -51,9 +51,12 @@ A flat piece of cardboard with white print is classified as paper at 96%, and th
 # PyTorch with CUDA (tested on an RTX 3070); without a GPU a plain `pip install torch torchvision` works
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu128
 pip install -r requirements.txt && pip install -e .
+python scripts/check_cuda.py   # optional: confirms the GPU is visible
 
 python app.py   # http://127.0.0.1:7860
 ```
+
+Exact versions behind the reported results are pinned in [requirements-lock.txt](requirements-lock.txt).
 
 The app loads the model from `artifacts/runs/final/efficientnet_b0`; `SORTWISE_RUN_DIR` points to another run. Without local weights it downloads the package from the Hugging Face Hub (`SORTWISE_MODEL_REPO`, default `gmorlo/sortwise-efficientnet-b0`) at version `SORTWISE_MODEL_VERSION` (default `v1`). A new version is published with `python scripts/publish_model.py --tag v2`; tags are immutable.
 
