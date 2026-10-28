@@ -285,11 +285,11 @@ Każdy etap kończy się weryfikowalnym rezultatem. Nie zaczynaj od rozbudowanej
 
 ## Decyzje otwarte
 
-- ~~Framework frontendu.~~ **Decyzja (2026-10-28):** demo w **Gradio** (`app.py`), wdrożenie na **HF Spaces** z podziałem dev/prod (branch `dev` → Space dev, `main` → Space prod), wagi w repo modelu na HF Hub. FastAPI + Postgres + Cloud Run przesunięte na później (historia i feedback).
+- ~~Framework frontendu.~~ **Decyzja (2026-10-28):** demo w **Gradio** (`app.py`), uruchamiane **lokalnie**; wagi w wersjonowanym repo modelu na HF Hub. Hosting odłożony: Gradio Spaces na darmowym CPU wymagają HF PRO, a budżet ma być bliski zera. Prezentacja przez zrzuty ekranu / krótkie wideo. CI = testy w GitHub Actions. FastAPI + Postgres + Cloud Run przesunięte na później (historia i feedback).
 - ~~Dokładny drugi model.~~ Wybrany EfficientNet-B0 — patrz `docs/results.md`.
 - ~~Finalny zakres siatki hiperparametrów.~~ Patrz `docs/results.md`.
 - Przechowywanie i retencja zdjęć / wizualizacji.
 - Próg sugerowania ręcznej weryfikacji (po walidacji).
 - Dostęp do historii i koszty publicznego wdrożenia.
 
-**Na teraz:** aplikacja Gradio lokalnie → pakiet modelu na HF Hub → Spaces dev/prod (na razie prywatne).
+**Na teraz:** README pod portfolio (proces inżynierski, nie „ML na gotowym zbiorze”) + zrzuty ekranu / wideo z lokalnego demo.
