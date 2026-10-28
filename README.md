@@ -83,4 +83,6 @@ docs/          results, findings, figures
 
 Analysis history and user corrections, evaluation on own photos with other backgrounds, an in-browser demo without a server (ONNX).
 
-Data: [TrashNet](https://github.com/garythung/trashnet) (Gary Thung, Mindy Yang).
+## License
+
+Code: [MIT](LICENSE). Data: [TrashNet](https://github.com/garythung/trashnet) by Gary Thung and Mindy Yang, under its own license; the dataset is not included in this repository. The trained weights are derived from TrashNet and ImageNet-pretrained torchvision models.
