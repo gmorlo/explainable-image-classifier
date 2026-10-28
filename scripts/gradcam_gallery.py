@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections import Counter
 from pathlib import Path
 
 import matplotlib
@@ -19,7 +20,7 @@ SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from sortwise.config import CLASS_NAMES, DATASET_DIR, RUNS_DIR
+from sortwise.config import CLASS_NAMES, DATASET_DIR, RUNS_DIR, SPLITS_PATH
 from sortwise.explain.gradcam import grad_cam, overlay, preprocess
 from sortwise.models.factory import MODEL_SPECS, build_model
 from sortwise.training.trainer import get_device
@@ -69,15 +70,13 @@ def main() -> int:
     layer = MODEL_SPECS[model_name].cam_layer(model)
 
     error_paths = {e["path"] for e in test["errors"]}
-    splits = json.loads((ROOT / "data/processed/splits/splits.json").read_text(encoding="utf-8"))
+    splits = json.loads(SPLITS_PATH.read_text(encoding="utf-8"))
     correct = []
     for cls in CLASS_NAMES:
         path = next(p for p in splits["splits"]["test"] if p.startswith(cls + "/") and p not in error_paths)
         correct.append({"path": path, "true": cls})
     # Most common confusions first (cardboard->paper, plastic->glass, ...).
-    pair_count: dict[tuple, int] = {}
-    for e in test["errors"]:
-        pair_count[(e["true"], e["pred"])] = pair_count.get((e["true"], e["pred"]), 0) + 1
+    pair_count = Counter((e["true"], e["pred"]) for e in test["errors"])
     errors = sorted(test["errors"], key=lambda e: -pair_count[(e["true"], e["pred"])])[: args.max_errors]
 
     args.out_dir.mkdir(parents=True, exist_ok=True)

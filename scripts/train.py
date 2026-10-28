@@ -102,7 +102,7 @@ def main() -> int:
         results.append(run_variant(cfg_doc, variant, run_name=args.run_name))
 
     if len(results) == 2:
-        # Defer comparison to compare_variants.py using latest runs;
+        # Defer comparison to compare_models.py using latest runs;
         # still print a quick summary here.
         print("\n=== Quick summary ===")
         for r in results:

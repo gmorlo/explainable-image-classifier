@@ -28,7 +28,7 @@ Fine-tuning = trenowany ostatni blok sieci + klasyfikator; head = tylko klasyfik
 
 Wnioski:
 - Fine-tuning ostatniego bloku daje +0.06–0.13 macro-F1 względem samej głowy.
-- EfficientNet-B0 i ResNet18 są blisko; EfficientNet wybrany, bo ma najlepszy wynik przy ~3× mniejszych wagach. 13 ms na CPU wystarcza na darmowy CPU w HF Spaces.
+- EfficientNet-B0 i ResNet18 są blisko; EfficientNet wybrany, bo ma najlepszy wynik przy ~3× mniejszych wagach. 13 ms na CPU desktopa; czas na darmowym CPU w HF Spaces zmierzymy po wdrożeniu.
 
 ## 3. Hiperparametry EfficientNet-B0 finetune
 
